@@ -14,7 +14,30 @@ An iPhone camera that shoots in four black-and-white film looks, with a live fil
 
 The gothic looks work best with a dark background and one light on the face.
 
-## Using it
+There are two versions with the same looks:
+
+- **Web app** (`docs/`) — runs in Safari on the iPhone, no Mac or Apple developer account needed.
+- **Native app** (`SoyCuba/`, `SoyCuba.xcodeproj`) — full-resolution photos; needs Xcode to build.
+
+## Web app
+
+Hosting it with GitHub Pages (once):
+
+1. On GitHub, open the repository's **Settings → Pages**.
+2. Under *Build and deployment*, set **Source** to *Deploy from a branch*, pick the branch that
+   holds this code and the **/docs** folder, and save.
+3. After a minute the page shows the site address (`https://<owner>.github.io/<repository>/`).
+
+On the iPhone, open that address in Safari and allow the camera. To make it feel like an app,
+tap Share → **Add to Home Screen**.
+
+After taking a photo, tap **Save** and choose *Save Image*, or press and hold the photo.
+
+Limits compared with the native app: photos are taken from the live video feed (about
+1920 × 1440), exposure is a digital adjustment rather than a camera setting, there is no
+tap-to-focus, and lens buttons appear only if Safari lists the rear lenses separately.
+
+## Using the native app
 
 - Pick a look under the viewfinder; tap the viewfinder to focus and meter.
 - Lens buttons switch between the rear cameras; the right-hand button flips to the front camera.
@@ -23,7 +46,7 @@ The gothic looks work best with a dark background and one light on the face.
 - The photo button develops an existing picture from your library with the current look.
 - Photos are saved to the Photos library as full-resolution JPEGs.
 
-## Building
+## Building the native app
 
 Requires Xcode 16 or later and an iPhone on iOS 17 or later.
 

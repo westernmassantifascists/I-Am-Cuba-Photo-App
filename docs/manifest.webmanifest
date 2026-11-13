@@ -1,0 +1,14 @@
+{
+  "name": "Soy Cuba",
+  "short_name": "Soy Cuba",
+  "description": "A black-and-white film camera with four looks.",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

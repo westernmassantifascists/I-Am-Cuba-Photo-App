@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Soy Cuba</title>
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Soy Cuba">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<style>
+  /* One screen, like a camera: viewfinder takes the space, controls sit under the thumb. */
+  :root {
+    --bg: #000;
+    --panel: #15140f;
+    --fg: #f3efe2;
+    --dim: #8f8a7a;
+    --accent: #f2c744;
+    --line: #2c2a22;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); overflow: hidden;
+    font: 14px/1.3 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+  [hidden] { display: none !important; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button:disabled { opacity: .35; cursor: default; }
+
+  #app { height: 100%; display: flex; flex-direction: column; gap: 10px;
+    padding: max(8px, env(safe-area-inset-top, 0px)) max(0px, env(safe-area-inset-right, 0px))
+             max(12px, env(safe-area-inset-bottom, 0px)) max(0px, env(safe-area-inset-left, 0px)); }
+
+  header { display: flex; align-items: center; gap: 12px; padding: 0 16px; min-height: 44px; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { padding: 8px 12px; font-size: 12px; letter-spacing: .04em; color: var(--dim); min-height: 36px; }
+  .seg button[aria-pressed="true"] { background: var(--fg); color: #000; font-weight: 600; }
+  #status { flex: 1; min-width: 0; text-align: center; font-size: 12px; color: var(--dim);
+    font-family: ui-monospace, Menlo, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .icon { width: 44px; height: 44px; display: grid; place-items: center; }
+  .icon svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7;
+    stroke-linecap: round; stroke-linejoin: round; }
+  #adjust[aria-pressed="true"] { color: var(--accent); }
+
+  #stage { flex: 1; min-height: 0; position: relative; display: grid; place-items: center; overflow: hidden; }
+  #view { display: block; background: #000; }
+  #flash { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .25s ease-out; }
+  #flash.on { opacity: 1; transition: none; }
+  #lenses { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; justify-content: center; gap: 10px; }
+  #lenses button { min-width: 42px; height: 42px; padding: 0 8px; border-radius: 21px; background: rgba(0,0,0,.55);
+    font: 600 11px ui-monospace, Menlo, monospace; }
+  #lenses button[aria-pressed="true"] { color: var(--accent); }
+  #notice { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; padding: 24px; text-align: center; color: var(--dim); font-size: 15px; line-height: 1.45; }
+  #notice button { padding: 12px 22px; border-radius: 24px; background: var(--accent); color: #000; font-weight: 600; }
+
+  #looks { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; flex: none; }
+  #looks::-webkit-scrollbar { display: none; }
+  #looks button { flex: none; min-height: 44px; text-align: center; color: var(--dim); }
+  #looks button:first-child { margin-left: auto; }
+  #looks button:last-child { margin-right: auto; }
+  #looks b { display: block; font-size: 12px; letter-spacing: .1em; }
+  #looks span { display: block; font-size: 10px; margin-top: 2px; }
+  #looks button[aria-pressed="true"] { color: var(--accent); }
+
+  #sliders { display: grid; gap: 4px; padding: 0 20px; flex: none; }
+  #sliders label { display: grid; grid-template-columns: 76px 1fr; align-items: center; min-height: 34px;
+    font: 12px ui-monospace, Menlo, monospace; color: var(--dim); }
+  input[type=range] { width: 100%; accent-color: var(--fg); }
+
+  footer { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 24px; flex: none; }
+  footer .left { display: flex; align-items: center; gap: 12px; }
+  footer .right { display: flex; justify-content: flex-end; }
+  #thumb { width: 48px; height: 48px; border-radius: 6px; background: var(--panel) center/cover no-repeat; border: 1px solid var(--line); }
+  #shutter { width: 76px; height: 76px; border-radius: 50%; border: 4px solid var(--fg); display: grid; place-items: center; }
+  #shutter::after { content: ""; width: 60px; height: 60px; border-radius: 50%; background: var(--fg); transition: transform .1s; }
+  #shutter:active::after { transform: scale(.9); }
+
+  #viewer { position: fixed; inset: 0; z-index: 5; background: #000; display: flex; flex-direction: column;
+    padding: max(8px, env(safe-area-inset-top, 0px)) 0 max(16px, env(safe-area-inset-bottom, 0px)); }
+  #viewer .frame { flex: 1; min-height: 0; display: grid; place-items: center; }
+  #photo { max-width: 100%; max-height: 100%; object-fit: contain; -webkit-user-select: auto; user-select: auto;
+    -webkit-touch-callout: default; }
+  #viewer p { margin: 8px 20px; text-align: center; color: var(--dim); font-size: 12px; }
+  #viewer .bar { display: flex; justify-content: center; gap: 14px; padding: 4px 20px 0; }
+  #viewer .bar button { min-width: 120px; min-height: 46px; border-radius: 23px; border: 1px solid var(--line); font-weight: 600; }
+  #viewer #save { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  #cam { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+
+  @media (orientation: landscape) and (max-height: 520px) {
+    #app { flex-direction: row; flex-wrap: wrap; align-content: stretch; gap: 6px; }
+    header, #looks, #sliders { width: 100%; }
+    #stage { height: 55%; flex-basis: 60%; }
+    footer { grid-template-columns: 1fr; gap: 10px; justify-items: center; padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="seg" role="group" aria-label="Frame format">
+      <button id="fmt43" aria-pressed="true">4:3</button>
+      <button id="fmt169" aria-pressed="false">16:9</button>
+    </div>
+    <div id="status" role="status"></div>
+    <button id="adjust" class="icon" aria-label="Adjustments" aria-pressed="false">
+      <svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
+    </button>
+  </header>
+
+  <div id="stage">
+    <canvas id="view" aria-label="Viewfinder"></canvas>
+    <div id="flash"></div>
+    <div id="lenses"></div>
+    <div id="notice">
+      <div id="noticeText">Soy Cuba needs the camera to show the viewfinder.</div>
+      <button id="start">Start camera</button>
+    </div>
+  </div>
+
+  <nav id="looks" aria-label="Film look"></nav>
+
+  <div id="sliders" hidden>
+    <label for="ev">Exposure<input id="ev" type="range" min="-2" max="2" step="0.05" value="0"></label>
+    <label for="grain">Grain<input id="grain" type="range" min="0" max="2" step="0.05" value="1"></label>
+    <label for="glow">Glow<input id="glow" type="range" min="0" max="2" step="0.05" value="1"></label>
+  </div>
+
+  <footer>
+    <div class="left">
+      <button id="thumb" aria-label="Last photo" disabled></button>
+      <button id="import" class="icon" aria-label="Develop a photo from your library">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/></svg>
+      </button>
+    </div>
+    <button id="shutter" aria-label="Take photo" disabled></button>
+    <div class="right">
+      <button id="flip" class="icon" aria-label="Switch camera" disabled>
+        <svg viewBox="0 0 24 24"><path d="M4 9a8 8 0 0 1 14-3l2 2M20 15a8 8 0 0 1-14 3l-2-2"/><path d="M20 4v4h-4M4 20v-4h4"/></svg>
+      </button>
+    </div>
+  </footer>
+</div>
+
+<div id="viewer" hidden>
+  <div class="frame"><img id="photo" alt="Developed photograph"></div>
+  <p id="saveHint">Tap Save, or press and hold the photo and choose Save to Photos.</p>
+  <div class="bar">
+    <button id="close">Close</button>
+    <button id="save">Save</button>
+  </div>
+</div>
+
+<video id="cam" playsinline muted autoplay></video>
+<input id="file" type="file" accept="image/*" hidden>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------- looks
+// Same numbers as SoyCuba/FilmLook.swift in the native app.
+const LOOKS = [
+  { id: "soycuba", name: "SOY CUBA", detail: "Crisp · infrared",
+    w: [0.80, 0.60, -0.40], foliage: 1.2, greenLift: 1.5, gain: 1.0, bp: 0.02, wp: 1.05, contrast: 1.3,
+    lift: 0.045, ceil: 0.77, bloom: 0.12, grain: 0.045, grainFloor: 0.45, vignette: 0.30,
+    softness: 0, edgeBlur: 0, sharpen: 0.9 },
+  { id: "habana", name: "HABANA", detail: "Crisp · night",
+    w: [0.35, 0.50, 0.15], foliage: 0, greenLift: 0, gain: 1.1, bp: 0.06, wp: 1.0, contrast: 1.55,
+    lift: 0.04, ceil: 0.80, bloom: 0.10, grain: 0.04, grainFloor: 0.5, vignette: 0.40,
+    softness: 0, edgeBlur: 0, sharpen: 1.1 },
+  { id: "nocturne", name: "NOCTURNE", detail: "Soft · gothic",
+    w: [0.10, 0.55, 0.35], foliage: 0, greenLift: 0, gain: 1.35, bp: 0.24, wp: 0.97, contrast: 1.8,
+    lift: 0, ceil: 0.985, bloom: 0.55, grain: 0.014, grainFloor: 0, vignette: 0.85,
+    softness: 0.0018, edgeBlur: 0.012, sharpen: 0 },
+  { id: "espectro", name: "ESPECTRO", detail: "Gothic · textured",
+    w: [0.10, 0.55, 0.35], foliage: 0, greenLift: 0, gain: 1.25, bp: 0.22, wp: 0.98, contrast: 1.7,
+    lift: 0, ceil: 0.97, bloom: 0.2, grain: 0.03, grainFloor: 0.1, vignette: 0.7,
+    softness: 0, edgeBlur: 0.006, sharpen: 0.5 },
+];
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { return localStorage.getItem("soycuba." + k) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("soycuba." + k, v); } catch {} },
+};
+
+const state = {
+  look: LOOKS.find(l => l.id === store.get("look")) || LOOKS[0],
+  wide: store.get("format") === "16:9",
+  ev: 0, grain: 1, glow: 1,
+  front: false, deviceId: null, stream: null, running: false,
+  blob: null, blobURL: null,
+};
+
+// ---------------------------------------------------------------- WebGL pipeline
+const canvas = $("view");
+const gl = canvas.getContext("webgl", { alpha: false, antialias: false, depth: false, stencil: false });
+
+const VS = `attribute vec2 p; varying vec2 uv; void main(){ uv = p*0.5+0.5; gl_Position = vec4(p,0.,1.); }`;
+
+// Colour -> grey: spectral response, then the tone curve.
+const FS_TONE = `precision highp float;
+varying vec2 uv; uniform sampler2D src; uniform vec4 crop; uniform float mirror;
+uniform vec3 w; uniform vec2 veg; uniform float gain, bp, wp, con, lift, ceil_;
+vec3 lin(vec3 c){ return mix(c/12.92, pow((c+0.055)/1.055, vec3(2.4)), step(0.04045, c)); }
+void main(){
+  vec2 t = uv; if (mirror > 0.5) t.x = 1.0 - t.x;
+  t = crop.xy + t*crop.zw;
+  vec3 c = lin(texture2D(src, t).rgb);
+  float e = dot(w, c) + veg.x*max(0.0, c.g-c.b) + veg.y*max(0.0, c.g-c.r);
+  float x = pow(clamp(e*gain, 0.0, 1.0), 1.0/2.2);
+  x = clamp((x-bp)/(wp-bp), 0.0, 1.0);
+  float a = pow(x, con), b = pow(1.0-x, con);
+  float y = a/(a+b+1e-6);
+  gl_FragColor = vec4(vec3(lift + (ceil_-lift)*y), 1.0);
+}`;
+
+// One direction of a 9-tap Gaussian. With hi = 1 it first keeps only the highlights (for glow).
+const FS_BLUR = `precision highp float;
+varying vec2 uv; uniform sampler2D src; uniform vec2 dir; uniform float hi;
+float f(vec2 t){ float m = texture2D(src, t).r; return hi > 0.5 ? m*clamp((m-0.55)/0.45, 0.0, 1.0) : m; }
+void main(){
+  float s = f(uv)*0.2042;
+  s += (f(uv+dir)+f(uv-dir))*0.1802;
+  s += (f(uv+dir*2.0)+f(uv-dir*2.0))*0.1238;
+  s += (f(uv+dir*3.0)+f(uv-dir*3.0))*0.0663;
+  s += (f(uv+dir*4.0)+f(uv-dir*4.0))*0.0276;
+  gl_FragColor = vec4(vec3(s), 1.0);
+}`;
+
+// Sharpen or diffuse, glow, edge blur, vignette, grain.
+const FS_FINAL = `precision highp float;
+varying vec2 uv; uniform sampler2D tone, small, edgeT, bloomT;
+uniform float soft, sharp, bloom, edge, vig, grain, gfloor, cell; uniform vec2 res, seed;
+float hash(vec2 p){ p = mod(p, 4096.0); return fract(sin(dot(p, vec2(12.9898, 78.233)))*43758.5453); }
+float noise(vec2 p){
+  vec2 i = floor(p), f = fract(p);
+  float a = hash(i), b = hash(i+vec2(1.,0.)), c = hash(i+vec2(0.,1.)), d = hash(i+vec2(1.,1.));
+  return mix(mix(a,b,f.x), mix(c,d,f.x), f.y);
+}
+void main(){
+  float m = texture2D(tone, uv).r;
+  float s = texture2D(small, uv).r;
+  float base = soft > 0.0 ? s : clamp(m + sharp*(m-s), 0.0, 1.0);
+  vec2 px = uv*res;
+  float shortS = min(res.x, res.y), rr = distance(px, res*0.5), hd = length(res)*0.5;
+  if (edge > 0.0) {
+    float t = clamp((rr - shortS*0.28)/(hd - shortS*0.28), 0.0, 1.0);
+    base = mix(base, texture2D(edgeT, uv).r, t);
+  }
+  float v = clamp(base + bloom*texture2D(bloomT, uv).r, 0.0, 1.0);
+  v *= 1.0 - vig*clamp((rr/hd - 0.35)/0.65, 0.0, 1.0);
+  float n = (noise(px/cell + seed) + noise(px/cell*0.5 + seed.yx) - 1.0)*1.5;
+  float wt = gfloor + (1.0-gfloor)*4.0*v*(1.0-v);
+  gl_FragColor = vec4(vec3(clamp(v + grain*n*wt, 0.0, 1.0)), 1.0);
+}`;
+
+function program(fs) {
+  const p = gl.createProgram();
+  for (const [type, src] of [[gl.VERTEX_SHADER, VS], [gl.FRAGMENT_SHADER, fs]]) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    gl.attachShader(p, s);
+  }
+  gl.bindAttribLocation(p, 0, "p");
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {};
+  const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const name = gl.getActiveUniform(p, i).name; u[name] = gl.getUniformLocation(p, name); }
+  return { p, u };
+}
+
+let P = null, srcTex = null, MAX_TEX = 4096;
+const targets = {};
+
+function initGL() {
+  P = { tone: program(FS_TONE), blur: program(FS_BLUR), final: program(FS_FINAL) };
+  const quad = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  srcTex = makeTexture();
+  MAX_TEX = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
+}
+
+function makeTexture() {
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return t;
+}
+
+function target(key, w, h) {
+  w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+  let t = targets[key];
+  if (!t) { t = targets[key] = { tex: makeTexture(), fbo: gl.createFramebuffer(), w: 0, h: 0 }; }
+  if (t.w !== w || t.h !== h) {
+    gl.bindTexture(gl.TEXTURE_2D, t.tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t.tex, 0);
+    t.w = w; t.h = h;
+  }
+  return t;
+}
+
+function bind(unit, tex, loc) {
+  gl.activeTexture(gl.TEXTURE0 + unit);
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.uniform1i(loc, unit);
+}
+
+function draw(t) {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, t ? t.fbo : null);
+  gl.viewport(0, 0, t ? t.w : canvas.width, t ? t.h : canvas.height);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+// Gaussian blur of `src` with the given sigma (in full-size pixels), done at reduced size when large.
+function blur(key, src, sigma, w, h, highlights) {
+  const scale = Math.min(1, 3 / sigma);
+  const a = target(key + "a", w * scale, h * scale), b = target(key + "b", w * scale, h * scale);
+  const step = sigma * scale / 2;
+  gl.useProgram(P.blur.p);
+  bind(0, src.tex, P.blur.u.src);
+  gl.uniform2f(P.blur.u.dir, step / a.w, 0);
+  gl.uniform1f(P.blur.u.hi, highlights ? 1 : 0);
+  draw(a);
+  bind(0, a.tex, P.blur.u.src);
+  gl.uniform2f(P.blur.u.dir, 0, step / a.h);
+  gl.uniform1f(P.blur.u.hi, 0);
+  draw(b);
+  return b;
+}
+
+// Centre crop of the source to the chosen format, in whichever orientation the source has.
+function cropFor(sw, sh, whole) {
+  if (whole) return { cw: sw, ch: sh, rect: [0, 0, 1, 1] };
+  const ratio = state.wide ? 16 / 9 : 4 / 3;
+  const landscape = sw >= sh;
+  let long = landscape ? sw : sh, short = landscape ? sh : sw;
+  if (long / short > ratio) long = short * ratio; else short = long / ratio;
+  const cw = Math.floor(landscape ? long : short), ch = Math.floor(landscape ? short : long);
+  return { cw, ch, rect: [(sw - cw) / 2 / sw, (sh - ch) / 2 / sh, cw / sw, ch / sh] };
+}
+
+// Renders the source texture (sw × sh) through the current look into the canvas at outW × outH.
+function render(sw, sh, outW, outH, mirror, whole) {
+  const L = state.look, { rect } = cropFor(sw, sh, whole);
+  if (canvas.width !== outW || canvas.height !== outH) { canvas.width = outW; canvas.height = outH; }
+  const short = Math.min(outW, outH);
+
+  const tone = target("tone", outW, outH);
+  gl.useProgram(P.tone.p);
+  bind(0, srcTex, P.tone.u.src);
+  gl.uniform4fv(P.tone.u.crop, rect);
+  gl.uniform1f(P.tone.u.mirror, mirror ? 1 : 0);
+  gl.uniform3fv(P.tone.u.w, L.w);
+  gl.uniform2f(P.tone.u.veg, L.foliage, L.greenLift);
+  gl.uniform1f(P.tone.u.gain, L.gain * Math.pow(2, state.ev));
+  gl.uniform1f(P.tone.u.bp, L.bp); gl.uniform1f(P.tone.u.wp, L.wp);
+  gl.uniform1f(P.tone.u.con, L.contrast);
+  gl.uniform1f(P.tone.u.lift, L.lift); gl.uniform1f(P.tone.u.ceil_, L.ceil);
+  draw(tone);
+
+  const glow = L.bloom * state.glow;
+  const small = (L.softness > 0 || L.sharpen > 0)
+    ? blur("small", tone, L.softness > 0 ? short * L.softness : Math.max(1, short * 0.002), outW, outH, false) : tone;
+  const edge = L.edgeBlur > 0 ? blur("edge", tone, short * L.edgeBlur, outW, outH, false) : tone;
+  const bloom = glow > 0 ? blur("bloom", tone, short * 0.02, outW, outH, true) : tone;
+
+  const u = P.final.u;
+  gl.useProgram(P.final.p);
+  bind(0, tone.tex, u.tone); bind(1, small.tex, u.small); bind(2, edge.tex, u.edgeT); bind(3, bloom.tex, u.bloomT);
+  gl.uniform1f(u.soft, L.softness); gl.uniform1f(u.sharp, L.sharpen);
+  gl.uniform1f(u.bloom, glow); gl.uniform1f(u.edge, L.edgeBlur);
+  gl.uniform1f(u.vig, L.vignette);
+  gl.uniform1f(u.grain, L.grain * state.grain); gl.uniform1f(u.gfloor, L.grainFloor);
+  gl.uniform1f(u.cell, Math.max(1, short / 700));
+  gl.uniform2f(u.res, outW, outH);
+  gl.uniform2f(u.seed, Math.random() * 900, Math.random() * 900);
+  draw(null);
+}
+
+function upload(source) {
+  gl.bindTexture(gl.TEXTURE_2D, srcTex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+}
+
+// ---------------------------------------------------------------- viewfinder
+const video = $("cam"), stage = $("stage");
+
+function layout() {
+  const vw = video.videoWidth || 3, vh = video.videoHeight || 4;
+  const { cw, ch } = cropFor(vw, vh);
+  const box = stage.getBoundingClientRect();
+  const k = Math.min(box.width / cw, box.height / ch);
+  canvas.style.width = Math.floor(cw * k) + "px";
+  canvas.style.height = Math.floor(ch * k) + "px";
+}
+
+function previewSize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  let w = Math.round(parseFloat(canvas.style.width) * dpr), h = Math.round(parseFloat(canvas.style.height) * dpr);
+  const k = Math.min(1, 1600 / Math.max(w, h));
+  return [Math.max(2, Math.round(w * k)), Math.max(2, Math.round(h * k))];
+}
+
+let lastDims = "";
+function frame() {
+  requestAnimationFrame(frame);
+  if (!state.running || document.hidden || !$("viewer").hidden) return;
+  if (video.readyState < 2 || !video.videoWidth) return;
+  const dims = video.videoWidth + "x" + video.videoHeight;
+  if (dims !== lastDims) { lastDims = dims; layout(); }
+  upload(video);
+  const [w, h] = previewSize();
+  render(video.videoWidth, video.videoHeight, w, h, state.front);
+}
+
+// ---------------------------------------------------------------- camera
+function setStatus(text, ms) {
+  $("status").textContent = text || "";
+  clearTimeout(setStatus.t);
+  if (text && ms !== 0) setStatus.t = setTimeout(() => { $("status").textContent = ""; }, ms || 2500);
+}
+
+function stopCamera() {
+  if (state.stream) state.stream.getTracks().forEach(t => t.stop());
+  state.stream = null; state.running = false;
+}
+
+async function startCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return showNotice("This browser can't open the camera here. You can still develop a photo from your library with the button at bottom left.", false);
+  }
+  stopCamera();
+  const base = { width: { ideal: 1920 }, height: { ideal: 1440 } };
+  const videoC = state.deviceId ? { ...base, deviceId: { exact: state.deviceId } }
+                                : { ...base, facingMode: state.front ? "user" : "environment" };
+  try {
+    state.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoC });
+  } catch (err) {
+    const denied = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
+    return showNotice(denied
+      ? "Camera access is off. Allow it for this site in Safari's settings, then try again."
+      : "The camera couldn't be started. You can still develop a photo from your library.", true);
+  }
+  const track = state.stream.getVideoTracks()[0];
+  const settings = track.getSettings ? track.getSettings() : {};
+  if (settings.facingMode) state.front = settings.facingMode === "user";
+  state.currentDevice = settings.deviceId || null;
+  video.srcObject = state.stream;
+  try { await video.play(); } catch {}
+  state.running = true;
+  $("notice").hidden = true;
+  $("shutter").disabled = false; $("flip").disabled = false;
+  listLenses();
+}
+
+function showNotice(text, retry) {
+  $("noticeText").textContent = text;
+  $("start").hidden = !retry;
+  $("start").textContent = "Try again";
+  $("notice").hidden = false;
+  $("shutter").disabled = true; $("flip").disabled = true;
+  $("lenses").replaceChildren();
+}
+
+// iPhones list each rear lens as its own camera; offer the ones we can name.
+async function listLenses() {
+  const box = $("lenses");
+  box.replaceChildren();
+  if (state.front || !navigator.mediaDevices.enumerateDevices) return;
+  let devices = [];
+  try { devices = await navigator.mediaDevices.enumerateDevices(); } catch { return; }
+  const pick = re => devices.find(d => d.kind === "videoinput" && re.test(d.label));
+  const lenses = [["0.5", pick(/ultra\s*wide/i)], ["1×", pick(/^back camera$/i)], ["TELE", pick(/telephoto/i)]]
+    .filter(([, d]) => d);
+  if (lenses.length < 2) return;
+  for (const [label, d] of lenses) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.setAttribute("aria-label", label + " lens");
+    b.setAttribute("aria-pressed", String(d.deviceId === state.currentDevice));
+    b.onclick = () => { state.deviceId = d.deviceId; startCamera(); };
+    box.append(b);
+  }
+}
+
+// ---------------------------------------------------------------- capture, import, save
+// `whole` keeps the picture's own shape (imports); otherwise it is cropped to the chosen format.
+function develop(sw, sh, mirror, whole) {
+  const { cw, ch } = cropFor(sw, sh, whole);
+  render(sw, sh, cw, ch, mirror, whole);
+  return new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.95));
+}
+
+async function finish(blob) {
+  if (!blob) return setStatus("The photo couldn't be developed.");
+  if (state.blobURL) URL.revokeObjectURL(state.blobURL);
+  state.blob = blob; state.blobURL = URL.createObjectURL(blob);
+  $("photo").src = state.blobURL;
+  $("thumb").style.backgroundImage = `url(${state.blobURL})`;
+  $("thumb").disabled = false;
+  $("viewer").hidden = false;
+}
+
+$("shutter").onclick = async () => {
+  if (!state.running || !video.videoWidth) return;
+  const flash = $("flash");
+  flash.classList.add("on"); requestAnimationFrame(() => requestAnimationFrame(() => flash.classList.remove("on")));
+  upload(video);
+  finish(await develop(video.videoWidth, video.videoHeight, state.front));
+};
+
+$("import").onclick = () => $("file").click();
+$("file").onchange = async e => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  setStatus("Developing…", 0);
+  try {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.src = url;
+    await img.decode();
+    // Draw through a 2D canvas so the photo's rotation is applied and oversized photos are reduced.
+    const k = Math.min(1, MAX_TEX / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    upload(c);
+    setStatus("");
+    finish(await develop(c.width, c.height, false, true));
+  } catch {
+    setStatus("That image couldn't be read.");
+  }
+};
+
+$("thumb").onclick = () => { if (state.blob) $("viewer").hidden = false; };
+$("close").onclick = () => { $("viewer").hidden = true; };
+
+$("save").onclick = async () => {
+  if (!state.blob) return;
+  const name = "soycuba-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".jpg";
+  const file = new File([state.blob], name, { type: "image/jpeg" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); } catch {}
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = state.blobURL; a.download = name;
+  document.body.append(a); a.click(); a.remove();
+};
+
+// ---------------------------------------------------------------- controls
+function buildLooks() {
+  const nav = $("looks");
+  for (const look of LOOKS) {
+    const b = document.createElement("button");
+    b.innerHTML = `<b>${look.name}</b><span>${look.detail}</span>`;
+    b.setAttribute("aria-pressed", String(look === state.look));
+    b.onclick = () => {
+      state.look = look; store.set("look", look.id);
+      for (const o of nav.children) o.setAttribute("aria-pressed", String(o === b));
+      b.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    };
+    nav.append(b);
+  }
+}
+
+function setFormat(wide) {
+  state.wide = wide; store.set("format", wide ? "16:9" : "4:3");
+  $("fmt43").setAttribute("aria-pressed", String(!wide));
+  $("fmt169").setAttribute("aria-pressed", String(wide));
+  layout();
+}
+$("fmt43").onclick = () => setFormat(false);
+$("fmt169").onclick = () => setFormat(true);
+
+$("adjust").onclick = () => {
+  const open = $("sliders").hidden;
+  $("sliders").hidden = !open;
+  $("adjust").setAttribute("aria-pressed", String(open));
+  layout();
+};
+for (const id of ["ev", "grain", "glow"]) {
+  const input = $(id);
+  input.oninput = () => { state[id] = parseFloat(input.value); };
+  input.parentElement.ondblclick = () => { input.value = id === "ev" ? 0 : 1; input.oninput(); };
+}
+
+$("flip").onclick = () => { state.front = !state.front; state.deviceId = null; startCamera(); };
+$("start").onclick = startCamera;
+
+window.addEventListener("resize", layout);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || !state.stream) return;
+  const track = state.stream.getVideoTracks()[0];
+  if (!track || track.readyState === "ended") startCamera(); else video.play().catch(() => {});
+});
+
+// ---------------------------------------------------------------- start
+if (!gl) {
+  showNotice("This browser can't run the film pipeline (WebGL is unavailable).", false);
+  $("import").disabled = true;
+} else {
+  initGL();
+  buildLooks();
+  setFormat(state.wide);
+  requestAnimationFrame(frame);
+  startCamera();
+}
+</script>
+</body>
+</html>

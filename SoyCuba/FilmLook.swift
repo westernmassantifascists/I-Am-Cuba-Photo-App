@@ -77,14 +77,14 @@ struct FilmLook: Identifiable, Equatable {
         vignette: 0.40, softness: 0, edgeBlur: 0, sharpen: 1.1)
 
     /// The soft gothic portraits: blue-sensitive (orthochromatic) response that turns lips and
-    /// veins dark against white skin, crushed blacks, heavy diffusion and glow, edges dissolving.
+    /// veins dark against white skin, crushed blacks, gentle diffusion and glow, edges falling out of focus.
     static let nocturne = FilmLook(
         id: "nocturne", name: "NOCTURNE", detail: "Soft · gothic",
         red: 0.10, green: 0.55, blue: 0.35, foliage: 0, greenLift: 0,
         gain: 1.35, blackPoint: 0.24, whitePoint: 0.97, contrast: 1.8,
         lift: 0, ceiling: 0.985,
         bloom: 0.55, grain: 0.014, grainFloor: 0,
-        vignette: 0.85, softness: 0.004, edgeBlur: 0.02, sharpen: 0)
+        vignette: 0.85, softness: 0.0018, edgeBlur: 0.012, sharpen: 0)
 
     /// The harder gothic frames: the same ortho response and crushed blacks, but with
     /// the texture of skin, hair and fabric kept, only a little glow, and visible grain.

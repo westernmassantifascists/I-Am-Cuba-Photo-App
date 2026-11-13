@@ -8,7 +8,7 @@ An iPhone camera that shoots in four black-and-white film looks, with a live fil
 - **HABANA** (crisp, night) — the film's interiors and night streets: ordinary black-and-white
   stock, hard light, every pore in focus, grainy shadows.
 - **NOCTURNE** (soft, gothic) — a blue-sensitive response that turns lips and veins dark
-  against white skin, blacks crushed to nothing, heavy diffusion and glow, edges dissolving.
+  against white skin, blacks crushed to nothing, gentle diffusion and glow, edges falling out of focus.
 - **ESPECTRO** (gothic, textured) — the same response and crushed blacks, but skin, hair and
   fabric keep their texture, with less glow and more grain.
 

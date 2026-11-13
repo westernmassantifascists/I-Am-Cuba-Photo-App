@@ -49,6 +49,15 @@ final class FilmProcessor: @unchecked Sendable {
                 .cropped(to: extent)
         }
 
+        // 2b. Crispness.
+        if look.sharpen > 0 {
+            let sharpen = CIFilter.unsharpMask()
+            sharpen.inputImage = image.clampedToExtent()
+            sharpen.radius = max(1, Float(short) * 0.002)
+            sharpen.intensity = look.sharpen
+            image = (sharpen.outputImage ?? image).cropped(to: extent)
+        }
+
         // 3. Highlight glow / halation.
         let glow = look.bloom * params.glowAmount
         if glow > 0 {

@@ -1,15 +1,18 @@
 # Soy Cuba
 
-An iPhone camera that shoots in two black-and-white film looks, with a live filtered viewfinder.
+An iPhone camera that shoots in four black-and-white film looks, with a live filtered viewfinder.
 
-- **SOY CUBA** — the infrared look of *I Am Cuba* (1964): skies go near-black, cane, palms and
-  foliage glow white, skin is luminous, and the print is soft and grey with lifted blacks,
-  capped highlights and heavy grain. Try it on the 0.5 lens, low and close, for the film's
-  ultra-wide perspective.
-- **NOCTURNE** — the portrait look: a blue-sensitive (orthochromatic) response that turns lips,
-  veins and shadows dark against white skin, blacks crushed to nothing, highlight glow, and
-  focus and light falling away at the edges. Works best with a dark background and one light
-  on the face.
+- **SOY CUBA** (crisp, infrared) — *I Am Cuba*'s exteriors: skies go near-black, cane, palms
+  and foliage glow white, skin is luminous. Sharp and deep-focus, printed grey with lifted
+  blacks, capped highlights and heavy grain. Try the 0.5 lens, low and close.
+- **HABANA** (crisp, night) — the film's interiors and night streets: ordinary black-and-white
+  stock, hard light, every pore in focus, grainy shadows.
+- **NOCTURNE** (soft, gothic) — a blue-sensitive response that turns lips and veins dark
+  against white skin, blacks crushed to nothing, heavy diffusion and glow, edges dissolving.
+- **ESPECTRO** (gothic, textured) — the same response and crushed blacks, but skin, hair and
+  fabric keep their texture, with less glow and more grain.
+
+The gothic looks work best with a dark background and one light on the face.
 
 ## Using it
 
@@ -35,7 +38,7 @@ Requires Xcode 16 or later and an iPhone on iOS 17 or later.
 
 1. A 3D lookup table converts colour to grey using the film's spectral response (negative blue
    and boosted greens for infrared; almost no red for ortho) followed by its tone curve.
-2. Lens softness, highlight glow, edge blur and vignette.
+2. Sharpening or diffusion, highlight glow, edge blur and vignette.
 3. Grain, weighted toward the midtones, sized relative to the frame so the preview matches the photo.
 
 To retune a look, edit its values in `FilmLook.swift`.

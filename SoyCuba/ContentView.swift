@@ -129,7 +129,8 @@ struct ContentView: View {
     }
 
     private var lookPicker: some View {
-        HStack(spacing: 28) {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 24) {
             ForEach(FilmLook.all) { look in
                 Button { camera.look = look } label: {
                     VStack(spacing: 2) {
@@ -140,7 +141,11 @@ struct ContentView: View {
                     .frame(minHeight: 44)
                 }
             }
+          }
+          .padding(.horizontal, 20)
+          .frame(maxWidth: .infinity)
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var sliders: some View {

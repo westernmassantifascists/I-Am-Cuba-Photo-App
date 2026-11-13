@@ -33,8 +33,12 @@ struct FilmLook: Identifiable, Equatable {
     /// 0 = grain only in midtones, 1 = grain everywhere including blacks.
     var grainFloor: Float
     var vignette: Float
+    /// Diffusion: blur radius of the whole frame. 0 = none.
     var softness: Float
+    /// Focus falling away toward the edges.
     var edgeBlur: Float
+    /// Edge crispness (unsharp mask strength). 0 = none.
+    var sharpen: Float
 
     /// Maps an sRGB-encoded colour to an encoded grey value.
     func tone(r: Float, g: Float, b: Float) -> Float {
@@ -52,27 +56,47 @@ struct FilmLook: Identifiable, Equatable {
         return lift + (ceiling - lift) * y
     }
 
-    /// I Am Cuba (1964): infrared negative — black skies, glowing cane and palms,
-    /// luminous skin — printed soft and grey with lifted blacks and heavy grain.
+    /// I Am Cuba's exteriors: infrared negative — black skies, glowing cane and palms,
+    /// luminous skin — shot deep-focus and crisp, printed grey with lifted blacks and heavy grain.
     static let soyCuba = FilmLook(
-        id: "soycuba", name: "SOY CUBA", detail: "Infrared · 1964",
+        id: "soycuba", name: "SOY CUBA", detail: "Crisp · infrared",
         red: 0.80, green: 0.60, blue: -0.40, foliage: 1.2, greenLift: 1.5,
-        gain: 1.0, blackPoint: 0.02, whitePoint: 1.05, contrast: 1.25,
+        gain: 1.0, blackPoint: 0.02, whitePoint: 1.05, contrast: 1.3,
         lift: 0.045, ceiling: 0.77,
-        bloom: 0.35, grain: 0.045, grainFloor: 0.45,
-        vignette: 0.30, softness: 0.0012, edgeBlur: 0)
+        bloom: 0.12, grain: 0.045, grainFloor: 0.45,
+        vignette: 0.30, softness: 0, edgeBlur: 0, sharpen: 0.9)
 
-    /// The portrait references: blue-sensitive (orthochromatic) response that turns
-    /// lips and veins dark against white skin, crushed blacks, glow, soft dark edges.
+    /// I Am Cuba's interiors and night streets: ordinary panchromatic stock, hard light,
+    /// every pore and bead of sweat in focus, deep shadows that still hold grain.
+    static let habana = FilmLook(
+        id: "habana", name: "HABANA", detail: "Crisp · night",
+        red: 0.35, green: 0.50, blue: 0.15, foliage: 0, greenLift: 0,
+        gain: 1.1, blackPoint: 0.06, whitePoint: 1.0, contrast: 1.55,
+        lift: 0.04, ceiling: 0.80,
+        bloom: 0.10, grain: 0.04, grainFloor: 0.5,
+        vignette: 0.40, softness: 0, edgeBlur: 0, sharpen: 1.1)
+
+    /// The soft gothic portraits: blue-sensitive (orthochromatic) response that turns lips and
+    /// veins dark against white skin, crushed blacks, heavy diffusion and glow, edges dissolving.
     static let nocturne = FilmLook(
-        id: "nocturne", name: "NOCTURNE", detail: "Ortho · crushed black",
+        id: "nocturne", name: "NOCTURNE", detail: "Soft · gothic",
         red: 0.10, green: 0.55, blue: 0.35, foliage: 0, greenLift: 0,
         gain: 1.35, blackPoint: 0.24, whitePoint: 0.97, contrast: 1.8,
         lift: 0, ceiling: 0.985,
-        bloom: 0.35, grain: 0.016, grainFloor: 0,
-        vignette: 0.85, softness: 0.002, edgeBlur: 0.012)
+        bloom: 0.55, grain: 0.014, grainFloor: 0,
+        vignette: 0.85, softness: 0.004, edgeBlur: 0.02, sharpen: 0)
 
-    static let all: [FilmLook] = [.soyCuba, .nocturne]
+    /// The harder gothic frames: the same ortho response and crushed blacks, but with
+    /// the texture of skin, hair and fabric kept, only a little glow, and visible grain.
+    static let espectro = FilmLook(
+        id: "espectro", name: "ESPECTRO", detail: "Gothic · textured",
+        red: 0.10, green: 0.55, blue: 0.35, foliage: 0, greenLift: 0,
+        gain: 1.25, blackPoint: 0.22, whitePoint: 0.98, contrast: 1.7,
+        lift: 0, ceiling: 0.97,
+        bloom: 0.2, grain: 0.03, grainFloor: 0.1,
+        vignette: 0.7, softness: 0, edgeBlur: 0.006, sharpen: 0.5)
+
+    static let all: [FilmLook] = [.soyCuba, .habana, .nocturne, .espectro]
 }
 
 enum FrameFormat: String, CaseIterable, Identifiable {

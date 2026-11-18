@@ -1,4 +1,70 @@
-# THE SURVEY: "Station Zero"
+# THE SURVEY
+
+Blender pieces for *The Survey*.
+
+- **`the_survey_world.py`: "The Enfilade"** (current). An endless stone world, with the
+  film's own photographs and clips placed inside it as image planes. Read
+  [WORLD.md](WORLD.md) for the rules of the place. Details are below.
+- **`the_survey_station_zero.py`: "Station Zero"**. The earlier all-3D shot of the field
+  and the theodolite. Its details are further down.
+
+## The Enfilade
+
+A 36-second walk down a straight line of doorways through identical stone rooms. Each
+room is lit only by lanterns the survey crew left behind.
+
+- **Windows:** the walls have windows onto other places, and those views are the real
+  footage: the field (your stone-window photo), the colonnade with crows, the night sea
+  with the moon, and the flooded hall with the bride rising from the water.
+- **Faces:** one waits in a dark side doorway.
+- **The bride:** your full-length photo stands in a doorway far down the line. Each time
+  the lanterns fail, she is a room closer.
+- **The end:** after the last blackout her face is right in front of the lens, then the
+  tilted-back face flashes in the dark for four frames.
+
+| Frames | Beat |
+|---|---|
+| ~205 | Glance right: the field through a window |
+| ~330 | Glance left: a face in a dark doorway |
+| ~455 | Glance left: the colonnade, crows crossing |
+| ~590 / ~665 | The sea and the moon on the left; the flooded hall on the right |
+| 262 · 420 · 562 · 700 | Blackouts. The bride steps from 40 m to 35, 30, 27.5, then 25 |
+| 760 | Last blackout. Her face (frames 766–812), then dark. Tilted face at 836–840 |
+
+### Your images
+
+The script reads your photographs and clips from `the-survey/plates/`. That folder is
+**git-ignored** because this repository is public, so the plates are only on this
+machine and in your uploads. To run the script elsewhere, put the files in `plates/` with
+these names:
+
+`window_field.jpg`, `colonnade.mp4`, `sea_moon.mp4`, `water_bride.mp4`, `bride.jpg`,
+`face_down.jpg`, `face_front.jpg`, `face_tilt_back.jpg`. Also there but not used yet:
+`face_ring.jpg`, `face_ring_close.jpg`, `water_bride.jpg`, `catacomb_scan.png`.
+
+If a plate is missing, the script uses a grey card in its place. Crops are set in
+`PLATES` at the top of the script. The plates are converted to black and white and shown
+at their true brightness: the view transform is Standard, and plate strength cancels the
+exposure.
+
+Preview renders go to `previews/`, which is also git-ignored because they show your
+images.
+
+### Running it
+
+Requires Blender 5.0 or later for the grade.
+
+- `blender -b --python the_survey_world.py` builds and saves `the_survey_world.blend`.
+- `blender -b --python the_survey_world.py -- --still 455 --samples 64 --percent 50`
+  renders one frame.
+- `blender -b --python the_survey_world.py -- --animation` renders the whole walk.
+
+Change `SEED` for a different maze. Lantern power, exposure, haze and grain are in the
+`TUNING` block.
+
+---
+
+# Station Zero (earlier piece)
 
 A single 15-second shot for *The Survey*, built entirely by a Blender Python script.
 

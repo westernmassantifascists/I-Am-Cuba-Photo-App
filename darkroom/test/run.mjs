@@ -16,6 +16,9 @@ import { analyze, build } from '../lib/build.mjs';
 import { packageProject } from '../lib/package.mjs';
 import { importTwine } from '../lib/importer.mjs';
 import { preview } from '../lib/serve.mjs';
+import { develop } from '../lib/develop.mjs';
+import { hasFfmpeg } from '../lib/lean.mjs';
+import { execFileSync } from 'node:child_process';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'darkroom-test-'));
 let passed = 0;
@@ -132,6 +135,44 @@ await test('emotion-led structure compiles: turns, drift pools, feel tags, nudge
   assert.ok(r.usedAssets.has('bg/b.jpg'), 'every picture of a used motif ships');
 });
 
+await test('develop: moods, qualities, palette and sound moods come from the material itself', async () => {
+  if (!hasFfmpeg()) return console.log('     (skipped: no ffmpeg)');
+  const dir = path.join(tmp, 'dev');
+  newProject(dir, { title: 'Dev', empty: true });
+  fs.mkdirSync(path.join(dir, 'assets', 'bg'), { recursive: true });
+  fs.mkdirSync(path.join(dir, 'assets', 'music'), { recursive: true });
+  const make = (args, out) => execFileSync('ffmpeg', ['-v', 'error', '-y', ...args, path.join(dir, 'assets', out)]);
+  // two dark blue pictures, two bright orange ones; one low quiet track, one loud bright one
+  make(['-f', 'lavfi', '-i', 'color=c=#0a1430:s=320x180', '-frames:v', '1'], 'bg/night1.jpg');
+  make(['-f', 'lavfi', '-i', 'color=c=#08102a:s=320x180', '-vf', 'noise=alls=10', '-frames:v', '1'], 'bg/night2.jpg');
+  make(['-f', 'lavfi', '-i', 'color=c=#f0a040:s=320x180', '-frames:v', '1'], 'bg/sun1.jpg');
+  make(['-f', 'lavfi', '-i', 'color=c=#ffb060:s=320x180', '-vf', 'noise=alls=10', '-frames:v', '1'], 'bg/sun2.jpg');
+  make(['-f', 'lavfi', '-i', 'sine=f=80:d=4', '-af', 'volume=0.05'], 'music/hum.m4a');
+  make(['-f', 'lavfi', '-i', 'anoisesrc=d=4:a=0.8'], 'music/hiss.m4a');
+  const d = await quiet(() => develop(dir));
+  assert.deepEqual(d.sync.added.sort(), ['night1', 'night2', 'sun1', 'sun2']);
+  const moodOf = (id) => d.pictures[id].mood;
+  assert.equal(moodOf('night1'), moodOf('night2'));
+  assert.equal(moodOf('sun1'), moodOf('sun2'));
+  assert.notEqual(moodOf('night1'), moodOf('sun1'));
+  assert.match(moodOf('night1'), /dark|cool/);
+  assert.ok(d.pictures.sun1.qualities.includes('bright') && d.pictures.sun1.qualities.includes('warm'));
+  assert.ok(d.moods[moodOf('sun1')].look.filter.includes('brightness('));
+  assert.ok(Object.values(d.music).some((m) => m.file === 'music/hum.m4a' && m.words.includes('low')));
+  assert.ok(Object.values(d.music).some((m) => m.file === 'music/hiss.m4a' && m.words.includes('bright')));
+  assert.ok(fs.existsSync(path.join(dir, 'moodboard.html')));
+  // the developed names are usable straight away
+  const night = moodOf('night1');
+  const hum = Object.entries(d.music).find(([, m]) => m.file === 'music/hum.m4a')[0];
+  fs.writeFileSync(path.join(dir, 'story', 's.twee'), `:: Start [motif-${night} look-${night} atmosphere-${night} music-${hum}]\nHello.\n@ending e "E"\n`);
+  const a = analyze(dir);
+  assert.deepEqual(a.result.errors, []);
+  assert.deepEqual(a.result.warnings, []);
+  assert.deepEqual(a.result.story.passages.Start.scene, { motif: night, music: 'music/hum.m4a', look: night, atmosphere: night });
+  assert.match(a.result.story.moodCss, new RegExp(`data-atmosphere="${night}"`));
+  assert.match(a.result.story.moodCss, /--dr-accent: #/);
+});
+
 const project = path.join(tmp, 'sample');
 await test('example piece builds, lean-packages and passes the itch.io check', async () => {
   newProject(project, { title: 'Sample Tide' });
@@ -238,15 +279,17 @@ if (playwright) {
       assert.equal((await state(page)).longing, 35);
       // Longing > 25 opens the cliff path, which fits longing + dread best.
       assert.equal(await passage(page), 'The Cliff Path');
-      assert.equal(await page.evaluate(() => document.querySelector('#dr').dataset.look), 'quiet'); // look rule: longing >= 35
+      assert.equal(await page.evaluate(() => document.querySelector('#dr').dataset.look), 'hard-cool'); // look rule: longing >= 35
       await choose(page, 'Go to the edge');
       assert.equal(await passage(page), 'The Grand Hotel'); // dread 25 now beats tenderness 10
       assert.equal(await page.evaluate(() => window.Darkroom.media.bg.id), 'hotel'); // the only facade picture
-      // style "vigil": bundled fonts, atmosphere-night layer, overlay-ash particles
-      assert.ok(await page.evaluate(async () => (await document.fonts.ready, document.fonts.check('1em "EB Garamond"') && [...document.fonts].some((f) => f.family.includes('EB Garamond') && f.status === 'loaded'))));
-      assert.equal(await page.evaluate(() => document.querySelector('#dr').dataset.atmosphere), 'night');
-      assert.equal(await page.evaluate(() => document.querySelector('#dr').dataset.overlay), 'ash');
-      assert.ok(await page.$('.dr-particles.on'));
+      // moods developed from the piece's own pictures: atmosphere tint and interface palette
+      assert.equal(await page.evaluate(() => document.querySelector('#dr').dataset.atmosphere), 'soft-dark');
+      await page.waitForTimeout(800);
+      assert.equal(await page.evaluate(() => document.querySelector('.dr-atmos').dataset.atmosphere), 'soft-dark');
+      assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.dr-atmos')).backgroundImage), /gradient/);
+      const moods = JSON.parse(fs.readFileSync(path.join(project, 'moods.json'), 'utf8'));
+      assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--dr-accent').trim()), moods.palette.accent);
       await shot(page, '3-hotel');
       await choose(page, 'Look up at the third floor'); // dread 50: not yet over the line
       const s1 = await state(page);
@@ -265,7 +308,8 @@ if (playwright) {
       assert.equal(await passage(page), 'The Water Comes In');
       await skipVideo(page);
       assert.equal(await page.evaluate(() => window.Darkroom.media.music.src), 'music/dread.m4a');
-      assert.equal(await page.evaluate(() => document.querySelector('#dr').dataset.look), 'shadowed');
+      assert.equal(await page.evaluate(() => window.Darkroom.media.bg.id), 'nightsea'); // dread favours the dark, soft sea picture
+      assert.equal(await page.evaluate(() => document.querySelector('#dr').dataset.look), 'soft-dark');
       await shot(page, '4-turn');
       assert.equal((await state(page)).dread, 70);
       // @resume: back to the scene the player was heading for.

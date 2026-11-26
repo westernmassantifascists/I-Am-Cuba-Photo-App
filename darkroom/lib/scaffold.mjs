@@ -13,7 +13,13 @@ export function newProject(dir, { title, empty = false } = {}) {
   fs.mkdirSync(dir, { recursive: true });
   fs.cpSync(TEMPLATE, dir, {
     recursive: true,
-    filter: (src) => !(empty && src.includes(`${path.sep}story${path.sep}`)),
+    filter: (src) => {
+      const rel = path.relative(TEMPLATE, src);
+      if (/^(\.darkroom|dist|release)(\/|\\|$)/.test(rel)) return false; // build output, caches
+      if (empty && /^(story|assets)[\/\\]/.test(rel)) return false;
+      if (empty && /^(library|moods)\.json$/.test(rel)) return false;
+      return true;
+    },
   });
   fs.mkdirSync(path.join(dir, 'story'), { recursive: true });
   const cfgPath = path.join(dir, 'darkroom.json');
@@ -26,5 +32,8 @@ export function newProject(dir, { title, empty = false } = {}) {
     cfg.title_screen = { background: null, music: null, subtitle: '' };
   }
   fs.writeFileSync(cfgPath, `${JSON.stringify(cfg, null, 2)}\n`);
+  try {
+    fs.rmSync(path.join(dir, 'moodboard.html'), { force: true });
+  } catch {}
   return dir;
 }

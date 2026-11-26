@@ -1,6 +1,6 @@
 // The media library (library.json): every photo and video tagged with motifs, so passages can ask
 // for an idea ("canal", "mourning") instead of a file name and the engine picks a fitting picture.
-// The format is The Dead City's assets.json:
+// Format:
 //   { "metadata": {...}, "assets": [ { "id", "category", "file", "type", "motifs": [], "repeatAllowed" } ] }
 // Optional per asset: "focal" ("center 74%": which part of the photo to keep on narrow screens)
 // and "still" (id of an image to show if a video cannot play).
@@ -46,7 +46,6 @@ export function loadLibrary(projectDir, assetIndex) {
     const type = mediaType(r.rel);
     if (type !== 'image' && type !== 'video') return errors.push({ ...where(a.id), msg: `"${a.file}" is not a picture or video` });
     const motifs = (a.motifs || []).map((m) => String(m).toLowerCase());
-    if (!motifs.length) warnings.push({ ...where(a.id), msg: `"${a.id}" has no motifs, so it is only shown when asked for by id` });
     entries.set(a.id, {
       id: a.id,
       rel: r.rel,
@@ -95,8 +94,11 @@ export function syncLibrary(projectDir, assetIndex, { prune = false, exclude = [
   }
   const missing = lib.assets.filter((a) => resolveAsset(assetIndex, cleanLibraryPath(a.file), 'any').error).map((a) => a.id);
   if (prune && missing.length) lib.assets = lib.assets.filter((a) => !missing.includes(a.id));
-  lib.metadata = { ...lib.metadata, totalAssets: lib.assets.length, lastUpdated: new Date().toISOString().slice(0, 10) };
-  fs.writeFileSync(path.join(projectDir, LIBRARY_FILE), `${JSON.stringify(lib, null, 2)}\n`);
+  const file = path.join(projectDir, LIBRARY_FILE);
+  if (added.length || (prune && missing.length) || !fs.existsSync(file)) {
+    lib.metadata = { ...lib.metadata, totalAssets: lib.assets.length, lastUpdated: new Date().toISOString().slice(0, 10) };
+    fs.writeFileSync(file, `${JSON.stringify(lib, null, 2)}\n`);
+  }
   const untagged = lib.assets.filter((a) => !(a.motifs || []).length).map((a) => a.id);
   return { added, missing, pruned: prune ? missing : [], untagged, total: lib.assets.length };
 }

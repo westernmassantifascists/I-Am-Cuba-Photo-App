@@ -331,7 +331,7 @@
   }
 
   // ---------------------------------------------------------------- atmosphere & particles
-  // atmosphere-fog etc. fade a styled layer (styles: your stylesheet or a built-in style such as "vigil");
+  // atmosphere-<mood> fades in a tinted layer (developed from the piece's pictures, or your stylesheet);
   // overlay-ash / dust / snow / rain / embers draw drifting particles over the picture.
   let atmosTimer;
   function setAtmosphere(name) {
@@ -442,7 +442,7 @@
     root.dataset.look = name || '';
   }
 
-  // Choose a picture for a motif the way The Dead City does: every candidate starts equal, the
+  // Choose a picture for a motif: every candidate starts equal, the
   // meters favour some motifs (darkroom.json scene.weights), the best-scoring ones form a pool, and
   // the picture shown last time for this motif is avoided if there is any alternative.
   function pickMotif(motif) {

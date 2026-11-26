@@ -1,0 +1,418 @@
+{
+  "note": "Developed from this piece's own pictures and sounds by `darkroom develop`. It is rewritten every time: put your own changes in darkroom.json (scene.looks, scene.music, theme).",
+  "developed": "2026-11-26",
+  "pictures": {
+    "shore": {
+      "file": "bg/shore.jpg",
+      "mood": "hard-cool",
+      "qualities": [
+        "cool",
+        "bright",
+        "hard-cool"
+      ],
+      "measures": {
+        "lum": 0.2399,
+        "contrast": 0.1066,
+        "sat": 0.3009,
+        "warmth": -0.0882
+      },
+      "colours": [
+        "#1a2025",
+        "#303944",
+        "#546479"
+      ]
+    },
+    "pier": {
+      "file": "bg/pier.jpg",
+      "mood": "hard-cool",
+      "qualities": [
+        "cool",
+        "bright",
+        "hard-cool"
+      ],
+      "measures": {
+        "lum": 0.2018,
+        "contrast": 0.1126,
+        "sat": 0.3,
+        "warmth": -0.0746
+      },
+      "colours": [
+        "#12161a",
+        "#29313a",
+        "#4c5a6c"
+      ]
+    },
+    "nightsea": {
+      "file": "bg/nightsea.jpg",
+      "mood": "soft-dark",
+      "qualities": [
+        "soft",
+        "dark",
+        "muted",
+        "soft-dark"
+      ],
+      "measures": {
+        "lum": 0.0377,
+        "contrast": 0.0272,
+        "sat": 0.1686,
+        "warmth": -0.0159
+      },
+      "colours": [
+        "#030304",
+        "#08090c",
+        "#111318"
+      ]
+    },
+    "waves": {
+      "file": "bg/waves.mp4",
+      "mood": "hard-cool",
+      "qualities": [
+        "bright",
+        "cool",
+        "still",
+        "moving",
+        "hard-cool"
+      ],
+      "measures": {
+        "lum": 0.3113,
+        "contrast": 0.108,
+        "sat": 0.3148,
+        "warmth": -0.1212,
+        "motion": 0.0057,
+        "duration": 6
+      },
+      "colours": [
+        "#313a47",
+        "#505f74",
+        "#687b96"
+      ]
+    },
+    "hotel": {
+      "file": "bg/hotel.jpg",
+      "mood": "soft-dark",
+      "qualities": [
+        "soft",
+        "muted",
+        "dark",
+        "soft-dark"
+      ],
+      "measures": {
+        "lum": 0.104,
+        "contrast": 0.0649,
+        "sat": 0.1492,
+        "warmth": -0.0034
+      },
+      "colours": [
+        "#070907",
+        "#171c18",
+        "#29312a"
+      ]
+    },
+    "bakery": {
+      "file": "bg/bakery.jpg",
+      "mood": "hard-cool",
+      "qualities": [
+        "hard",
+        "dark",
+        "muted",
+        "hard-cool"
+      ],
+      "measures": {
+        "lum": 0.0786,
+        "contrast": 0.1537,
+        "sat": 0.1426,
+        "warmth": 0.0303
+      },
+      "colours": [
+        "#070605",
+        "#231e17",
+        "#b79b75"
+      ]
+    },
+    "shelter": {
+      "file": "bg/shelter.jpg",
+      "mood": "warm-vivid",
+      "qualities": [
+        "dark",
+        "warm",
+        "vivid",
+        "warm-vivid"
+      ],
+      "measures": {
+        "lum": 0.0774,
+        "contrast": 0.1224,
+        "sat": 0.3563,
+        "warmth": 0.0508
+      },
+      "colours": [
+        "#060504",
+        "#130e08",
+        "#9b7848"
+      ]
+    },
+    "rainwindow": {
+      "file": "bg/rainwindow.mp4",
+      "mood": "warm-vivid",
+      "qualities": [
+        "vivid",
+        "warm",
+        "soft",
+        "restless",
+        "moving",
+        "warm-vivid"
+      ],
+      "measures": {
+        "lum": 0.1686,
+        "contrast": 0.0722,
+        "sat": 0.5652,
+        "warmth": 0.1211,
+        "motion": 0.0172,
+        "duration": 6
+      },
+      "colours": [
+        "#1a130b",
+        "#372918",
+        "#4e3b23"
+      ]
+    },
+    "cliff": {
+      "file": "bg/cliff.jpg",
+      "mood": "hard-cool",
+      "qualities": [
+        "hard",
+        "muted",
+        "bright",
+        "hard-cool"
+      ],
+      "measures": {
+        "lum": 0.2494,
+        "contrast": 0.1965,
+        "sat": 0.0435,
+        "warmth": 0.0117
+      },
+      "colours": [
+        "#121211",
+        "#4f4f4b",
+        "#84817d"
+      ]
+    },
+    "house": {
+      "file": "bg/house.jpg",
+      "mood": "hard-cool",
+      "qualities": [
+        "dark",
+        "hard",
+        "warm",
+        "hard-cool"
+      ],
+      "measures": {
+        "lum": 0.0903,
+        "contrast": 0.1434,
+        "sat": 0.2397,
+        "warmth": 0.0351
+      },
+      "colours": [
+        "#080806",
+        "#18140f",
+        "#c4a881"
+      ]
+    },
+    "kitchen": {
+      "file": "bg/kitchen.jpg",
+      "mood": "warm-vivid",
+      "qualities": [
+        "warm",
+        "warm-vivid"
+      ],
+      "measures": {
+        "lum": 0.1413,
+        "contrast": 0.119,
+        "sat": 0.2769,
+        "warmth": 0.0575
+      },
+      "colours": [
+        "#0f0d0a",
+        "#362f23",
+        "#665741"
+      ]
+    }
+  },
+  "moods": {
+    "soft-dark": {
+      "words": [
+        "soft",
+        "dark",
+        "muted"
+      ],
+      "look": {
+        "opacity": 1,
+        "filter": "brightness(0.55) contrast(0.6) saturate(0.61)"
+      },
+      "tint": "#121514",
+      "atmosphere": "radial-gradient(ellipse at 50% 35%, rgba(169, 188, 182, 0.1), transparent 60%), linear-gradient(180deg, rgba(18, 21, 20, 0.12), rgba(18, 22, 21, 0.34))",
+      "pictures": [
+        "nightsea",
+        "hotel"
+      ]
+    },
+    "warm-vivid": {
+      "words": [
+        "warm",
+        "vivid",
+        "dark"
+      ],
+      "look": {
+        "opacity": 1,
+        "filter": "brightness(0.84) contrast(0.94) saturate(1.54) sepia(0.38)"
+      },
+      "tint": "#312619",
+      "atmosphere": "radial-gradient(ellipse at 50% 35%, rgba(213, 183, 144, 0.1), transparent 60%), linear-gradient(180deg, rgba(49, 38, 25, 0.12), rgba(28, 21, 13, 0.34))",
+      "pictures": [
+        "shelter",
+        "rainwindow",
+        "kitchen"
+      ]
+    },
+    "hard-cool": {
+      "words": [
+        "hard",
+        "cool",
+        "bright",
+        "muted"
+      ],
+      "look": {
+        "opacity": 1,
+        "filter": "brightness(1.26) contrast(1.23) saturate(0.86)"
+      },
+      "tint": "#3b4045",
+      "atmosphere": "radial-gradient(ellipse at 50% 35%, rgba(170, 178, 187, 0.1), transparent 60%), linear-gradient(180deg, rgba(59, 64, 69, 0.12), rgba(18, 20, 22, 0.34))",
+      "pictures": [
+        "shore",
+        "pier",
+        "waves",
+        "bakery",
+        "cliff",
+        "house"
+      ]
+    }
+  },
+  "palette": {
+    "bg": "#0e0d0c",
+    "surface": "#1b1a18",
+    "text": "#e6e1db",
+    "dim": "#a59b8d",
+    "accent": "#889fbf",
+    "accent_light": "#afbfd4",
+    "swatches": [
+      "#0f0e0d",
+      "#373735",
+      "#576372",
+      "#897f72",
+      "#bda17a"
+    ]
+  },
+  "music": {
+    "low-loud": {
+      "file": "music/dread.m4a",
+      "words": [
+        "low",
+        "loud",
+        "surging"
+      ],
+      "measures": {
+        "loudness": -19.4,
+        "brightness": 66,
+        "pace": 0.12,
+        "dynamics": 10.7,
+        "duration": 24
+      }
+    },
+    "low-slow": {
+      "file": "music/longing.m4a",
+      "words": [
+        "low",
+        "slow"
+      ],
+      "measures": {
+        "loudness": -22.1,
+        "brightness": 126,
+        "pace": 0,
+        "dynamics": 8.3,
+        "duration": 24
+      }
+    },
+    "bright-quiet": {
+      "file": "music/tenderness.m4a",
+      "words": [
+        "bright",
+        "quiet",
+        "steady"
+      ],
+      "measures": {
+        "loudness": -23.7,
+        "brightness": 232,
+        "pace": 0.17,
+        "dynamics": 7.5,
+        "duration": 24
+      }
+    }
+  },
+  "ambience": {
+    "bright-steady": {
+      "file": "ambience/rain.m4a",
+      "words": [
+        "bright",
+        "steady",
+        "slow",
+        "loud"
+      ],
+      "measures": {
+        "loudness": -31.8,
+        "brightness": 1941,
+        "pace": 0,
+        "dynamics": 0.9,
+        "duration": 12
+      }
+    },
+    "low-loud": {
+      "file": "ambience/waves.m4a",
+      "words": [
+        "low",
+        "loud",
+        "slow"
+      ],
+      "measures": {
+        "loudness": -27.3,
+        "brightness": 246,
+        "pace": 0.08,
+        "dynamics": 13.1,
+        "duration": 12
+      }
+    },
+    "busy-quiet": {
+      "file": "ambience/wind.m4a",
+      "words": [
+        "busy",
+        "quiet",
+        "surging"
+      ],
+      "measures": {
+        "loudness": -65.2,
+        "brightness": 461,
+        "pace": 1.25,
+        "dynamics": 32.1,
+        "duration": 12
+      }
+    }
+  },
+  "collection": {
+    "pictures": 11,
+    "monochrome": false,
+    "mean": {
+      "lum": 0.155,
+      "contrast": 0.111,
+      "sat": 0.26,
+      "warmth": 0
+    }
+  }
+}

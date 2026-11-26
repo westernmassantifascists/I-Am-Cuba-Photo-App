@@ -316,12 +316,17 @@ function compileBody(text, ctx) {
     for (const [tag, kind] of [['music', 'music'], ['sound', 'ambience']]) {
       if (!tagged[tag]) continue;
       const name = tag === 'sound' && al.sound && Object.prototype.hasOwnProperty.call(al.sound, tagged[tag]) ? al.sound[tagged[tag]] : tagged[tag];
-      const r = name === null ? { src: null } : mood(kind, name, hl);
-      if (r === undefined) warn(hl, `${tag}-${tagged[tag]}: no ${kind} track is mapped to "${name}" in darkroom.json scene.${kind}`);
+      let r = name === null || name === 'silence' || name === 'none' ? (mood(kind, name, hl) ?? { src: null }) : mood(kind, name, hl);
+      if (r === undefined) {
+        // not a mood name: a file of that name in the matching folder (music-theme -> assets/music/theme.m4a)
+        const f = resolveAsset(ctx.assetIndex, name, kind);
+        if (!f.error && f.rel.toLowerCase().startsWith(`${kind}/`)) r = { src: use(f.rel, kind, hl) };
+      }
+      if (r === undefined) warn(hl, `${tag}-${tagged[tag]}: no ${kind} mood "${name}" (run darkroom develop, or map it in darkroom.json scene.${kind}) and no file assets/${kind}/${name}`);
       else sc[kind] = r.src;
     }
     if (tagged.look) {
-      if (ctx.config.scene?.looks && !ctx.config.scene.looks[tagged.look]) warn(hl, `look-${tagged.look}: no look with that name in darkroom.json scene.looks`);
+      if (tagged.look !== 'neutral' && !ctx.config.scene?.looks?.[tagged.look]) warn(hl, `look-${tagged.look}: no look of that name (developed moods: ${Object.keys(ctx.config.scene?.looks || {}).join(', ') || 'none yet, run darkroom develop'})`);
       sc.look = tagged.look;
     }
     if (tagged.atmosphere) sc.atmosphere = al.atmosphere?.[tagged.atmosphere] ?? tagged.atmosphere;
@@ -626,7 +631,7 @@ function compileBody(text, ctx) {
       }
       case 'look':
         if (!pos[0]) return err(ln, '@look needs a look name, e.g. @look mourning');
-        if (ctx.config.scene?.looks && !ctx.config.scene.looks[pos[0]]) warn(ln, `@look ${pos[0]}: not defined in darkroom.json scene.looks`);
+        if (pos[0] !== 'neutral' && !ctx.config.scene?.looks?.[pos[0]]) warn(ln, `@look ${pos[0]}: no look of that name (run darkroom develop, or add it to darkroom.json scene.looks)`);
         return cur().push({ t: 'look', look: pos[0] });
       case 'nudge': {
         // @nudge grief+4 obsession-1 — change meters, kept within their min/max

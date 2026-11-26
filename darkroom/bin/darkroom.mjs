@@ -10,6 +10,8 @@ import { importTwine } from '../lib/importer.mjs';
 import { printReport, mb, red, green, yellow, bold, dim, loadConfig } from '../lib/project.mjs';
 import { syncLibrary, loadLibrary, motifIndex } from '../lib/library.mjs';
 import { indexAssets, resolveAsset } from '../lib/assets.mjs';
+import { develop } from '../lib/develop.mjs';
+import { hasFfmpeg } from '../lib/lean.mjs';
 
 const HELP = `
 ${bold('darkroom')} — photo visual novels from Twine stories, ready for itch.io
@@ -23,6 +25,7 @@ ${bold('darkroom')} — photo visual novels from Twine stories, ready for itch.i
   darkroom package [project] [--no-lean]   shrink media, check itch.io limits, write release/*.zip
   darkroom preview [folder]                play a built folder (default: dist/) locally
   darkroom size [project]                  where the megabytes go
+  darkroom develop [project]               develop the piece's moods from its own pictures and sounds
   darkroom library [project] [--prune]     add new photos/videos to library.json, list motifs
 
   [project] defaults to the current folder. Add --verbose for full lists.
@@ -54,6 +57,10 @@ async function main() {
       if (!pos[0]) throw new Error('usage: darkroom new <folder> [--title "Name"]');
       newProject(project, { title: flags.title });
       console.log(`${green('Created')} ${pos[0]}`);
+      if (hasFfmpeg()) {
+        await develop(project);
+        console.log(dim('Developed its moods from the example media (moodboard.html).'));
+      }
       console.log(`\nNext:\n  cd ${pos[0]}\n  darkroom serve\n\nWrite in story/*.twee, put photos in assets/bg/, music in assets/music/.`);
       return;
     }
@@ -99,6 +106,27 @@ async function main() {
       let dir = project;
       if (fs.existsSync(path.join(dir, 'darkroom.json'))) dir = path.join(dir, 'dist');
       await preview(dir, { port: Number(flags.port) || 8080 });
+      return;
+    }
+    case 'develop': {
+      const tty = process.stdout.isTTY;
+      const d = await develop(project, {
+        onProgress: (n, rel) => tty && process.stdout.write(`\r  measuring ${n} ${dim(rel.slice(0, 50).padEnd(50))}`),
+      });
+      if (tty) process.stdout.write('\r'.padEnd(70) + '\r');
+      if (d.sync.added.length) console.log(`library.json: added ${d.sync.added.join(', ')}`);
+      const c = d.collection;
+      console.log(bold(`Picture moods`) + dim(` from ${c ? c.pictures : 0} pictures${c?.monochrome ? ' (black and white: tone only)' : ''}`));
+      for (const [name, m] of Object.entries(d.moods)) console.log(`  ${green(name.padEnd(18))} ${dim(m.words.join(' · ').padEnd(26))} ${m.pictures.join(', ')}`);
+      for (const kind of ['music', 'ambience']) {
+        const list = Object.entries(d[kind]);
+        if (!list.length) continue;
+        console.log(bold(`${kind[0].toUpperCase()}${kind.slice(1)} moods`));
+        for (const [name, s] of list) console.log(`  ${green(name.padEnd(18))} ${dim(s.file)}`);
+      }
+      if (d.palette) console.log(bold('Palette') + `  background ${d.palette.bg}  text ${d.palette.text}  accent ${d.palette.accent}`);
+      console.log(`\nWrote moods.json and ${bold('moodboard.html')} (open it in a browser).`);
+      console.log(dim('Use them as tags: look-<mood> atmosphere-<mood> motif-<mood or quality> music-<mood> sound-<mood>.'));
       return;
     }
     case 'library': {

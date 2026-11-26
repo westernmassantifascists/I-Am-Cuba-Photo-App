@@ -9,41 +9,43 @@ mkdir -p bg images music ambience sfx video
 
 FONT=$(fc-match -f '%{file}' 'DejaVu Sans' 2>/dev/null || true)
 label() { if [ -n "$FONT" ]; then echo ",drawtext=fontfile=$FONT:text='placeholder  $1':x=20:y=h-34:fontsize=15:fontcolor=white@0.45"; fi; }
-img() { # file, geq luminance expression
+# colour casts, so that darkroom develop has colour to find (cool sea, amber rooms, sodium street…)
+COOL='rr=0.78:gg=0.92:bb=1.12'; WARM='rr=1.1:gg=0.93:bb=0.7'; SODIUM='rr=1.12:gg=0.86:bb=0.5'; GREEN='rr=0.84:gg=1.0:bb=0.86'; PALE='rr=1.0:gg=0.98:bb=0.95'
+img() { # file, geq luminance expression, colour cast
   ffmpeg -v error -y -f lavfi -i "color=c=black:s=1280x720:d=1,format=gray" \
-    -vf "geq=lum='$2',noise=alls=16:allf=t,vignette=PI/4.5,format=yuv420p$(label "$1")" -frames:v 1 -q:v 7 "$1"
+    -vf "geq=lum='$2',noise=alls=16:allf=t,vignette=PI/4.5,format=rgb24,colorchannelmixer=${3:-$PALE},format=yuv420p$(label "$1")" -frames:v 1 -q:v 7 "$1"
 }
 H='(Y-H*0.5)'
 # shore: wide pale sky over a mile of wet sand
-img bg/shore.jpg  'if(lt(Y,H*0.45), 170-70*(Y/(H*0.45)), 60+50*(1+sin(Y/1.8+2*sin(X/140)))*0.25*(Y/H)+40*exp(-pow((Y-H*0.47)/8,2)))'
+img bg/shore.jpg  'if(lt(Y,H*0.45), 170-70*(Y/(H*0.45)), 60+50*(1+sin(Y/1.8+2*sin(X/140)))*0.25*(Y/H)+40*exp(-pow((Y-H*0.47)/8,2)))' "$COOL"
 # pier: dark posts marching out to the horizon
-img bg/pier.jpg   'if(lt(Y,H*0.5), 150-60*(Y/(H*0.5)), if(lt(abs(mod(X-W/2,90)-45),3+20*(Y/H-0.5))*gt(Y,H*0.52), 15, 55+20*sin(Y/3)))'
+img bg/pier.jpg   'if(lt(Y,H*0.5), 150-60*(Y/(H*0.5)), if(lt(abs(mod(X-W/2,90)-45),3+20*(Y/H-0.5))*gt(Y,H*0.52), 15, 55+20*sin(Y/3)))' "$COOL"
 # hotel: a dark facade, rows of black windows, one pale curtain
-img bg/hotel.jpg  'if(lt(mod(X,110),60)*lt(mod(Y,120),70)*gt(Y,60), if(lt(abs(X-W*0.62),30)*lt(abs(Y-H*0.42),40), 150, 8), 70-30*(Y/H))'
+img bg/hotel.jpg  'if(lt(mod(X,110),60)*lt(mod(Y,120),70)*gt(Y,60), if(lt(abs(X-W*0.62),30)*lt(abs(Y-H*0.42),40), 150, 8), 70-30*(Y/H))' "$GREEN"
 # bakery: one warm lit window in a dark street
-img bg/bakery.jpg '12+200*lt(abs(X-W*0.45),150)*lt(abs(Y-H*0.5),110)*(0.8+0.2*sin(X/9))+30*exp(-pow((X-W*0.45)/300,2))*gt(Y,H*0.62)'
+img bg/bakery.jpg '12+200*lt(abs(X-W*0.45),150)*lt(abs(Y-H*0.5),110)*(0.8+0.2*sin(X/9))+30*exp(-pow((X-W*0.45)/300,2))*gt(Y,H*0.62)' "$WARM"
 # cliff: a path climbing to an edge over nothing
-img bg/cliff.jpg  'if(lt(Y,H*(0.35+0.25*(X/W))), 180-80*(Y/H), if(lt(abs(Y-(H*0.9-0.4*X)),18), 140, 30+10*sin(X/7)*sin(Y/5)))'
+img bg/cliff.jpg  'if(lt(Y,H*(0.35+0.25*(X/W))), 180-80*(Y/H), if(lt(abs(Y-(H*0.9-0.4*X)),18), 140, 30+10*sin(X/7)*sin(Y/5)))' "$PALE"
 # shelter: a lit bus shelter in the rain
-img bg/shelter.jpg '20+150*lt(abs(X-W*0.5),180)*lt(abs(Y-H*0.55),100)*(1-0.3*(Y/H))+25*gt(sin(X*0.9+Y*0.15),0.97)'
+img bg/shelter.jpg '20+150*lt(abs(X-W*0.5),180)*lt(abs(Y-H*0.55),100)*(1-0.3*(Y/H))+25*gt(sin(X*0.9+Y*0.15),0.97)' "$SODIUM"
 # night sea: almost black water, a line of moonlight
-img bg/nightsea.jpg 'if(lt(Y,H*0.48), 25, 8+60*exp(-pow((X-W*0.55)/(18+120*(Y/H-0.48)),2))*(0.5+0.5*sin(Y/2)))'
+img bg/nightsea.jpg 'if(lt(Y,H*0.48), 25, 8+60*exp(-pow((X-W*0.55)/(18+120*(Y/H-0.48)),2))*(0.5+0.5*sin(Y/2)))' "$COOL"
 # house: a dim room, a doorway of light
-img bg/house.jpg  '25+170*lt(abs(X-W*0.6),70)*lt(abs(Y-H*0.45),180)+20*lt(abs(X-W*0.25),200)*gt(Y,H*0.7)'
+img bg/house.jpg  '25+170*lt(abs(X-W*0.6),70)*lt(abs(Y-H*0.45),180)+20*lt(abs(X-W*0.25),200)*gt(Y,H*0.7)' "$WARM"
 # kitchen: low warm light from one side
-img bg/kitchen.jpg '20+150*exp(-pow((X-W*0.15)/(W*0.25),2))*exp(-pow((Y-H*0.4)/(H*0.5),2))'
+img bg/kitchen.jpg '20+150*exp(-pow((X-W*0.15)/(W*0.25),2))*exp(-pow((Y-H*0.4)/(H*0.5),2))' "$WARM"
 # title: fog over the sea
-img bg/title.jpg  '30+120*exp(-pow((Y-H*0.5)/(H*0.18),2))+30*exp(-pow((X-W*0.5)/(W*0.4),2))'
+img bg/title.jpg  '30+120*exp(-pow((Y-H*0.5)/(H*0.18),2))+30*exp(-pow((X-W*0.5)/(W*0.4),2))' "$COOL"
 
-vid() { # file, seconds, geq expression (T = time), with or without sound
+vid() { # file, seconds, geq expression (T = time), colour cast
   ffmpeg -v error -y -f lavfi -i "color=c=black:s=640x360:d=$2:r=24,format=gray" \
-    -vf "geq=lum='$3',noise=alls=12:allf=t,format=yuv420p$(label "$1")" -an \
+    -vf "geq=lum='$3',noise=alls=12:allf=t,format=rgb24,colorchannelmixer=${4:-$PALE},format=yuv420p$(label "$1")" -an \
     -c:v libx264 -crf 30 -preset slow -movflags +faststart "$1"
 }
 # waves: light moving on water (background loop)
-vid bg/waves.mp4 6 'if(lt(Y,H*0.45), 150-60*(Y/(H*0.45)), 50+40*(1+sin(Y/2.2+2*sin(X/80+T*1.2)+T*2))*0.5*(Y/H))'
+vid bg/waves.mp4 6 'if(lt(Y,H*0.45), 150-60*(Y/(H*0.45)), 50+40*(1+sin(Y/2.2+2*sin(X/80+T*1.2)+T*2))*0.5*(Y/H))' "$COOL"
 # rain on a window (background loop)
-vid bg/rainwindow.mp4 6 '40+30*sin(X/60)+120*gt(sin(X*0.7+(Y-T*300)*0.08),0.985)'
+vid bg/rainwindow.mp4 6 '40+30*sin(X/60)+120*gt(sin(X*0.7+(Y-T*300)*0.08),0.985)' "$SODIUM"
 # tide: the water racing in from the horizon (cut-scene, with sound)
 ffmpeg -v error -y -f lavfi -i "color=c=black:s=640x360:d=5:r=24,format=gray" \
   -f lavfi -i "anoisesrc=color=brown:amplitude=0.4:d=5:r=44100" \

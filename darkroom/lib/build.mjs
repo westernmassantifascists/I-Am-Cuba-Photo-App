@@ -8,16 +8,12 @@ import { loadStoryDir } from './twine.mjs';
 import { indexAssets, resolveAsset } from './assets.mjs';
 import { compileStory } from './compile.mjs';
 import { hasFfmpeg, leanAssets } from './lean.mjs';
-import { loadLibrary } from './library.mjs';
+import { loadLibrary, LIBRARY_FILE } from './library.mjs';
+import { readMoods, paletteCss, atmosphereCss } from './develop.mjs';
 import { translateExpr, checkExpr } from './expr.mjs';
 import { DEFAULT_LOOKS } from './project.mjs';
 
 const RUNTIME = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'runtime');
-
-export function availableStyles() {
-  const dir = path.join(RUNTIME, 'themes');
-  return fs.existsSync(dir) ? fs.readdirSync(dir).filter((d) => fs.existsSync(path.join(dir, d, `${d}.css`))) : [];
-}
 
 // Compile without writing anything. Used by check, build, serve and package.
 export function analyze(projectDir) {
@@ -25,13 +21,49 @@ export function analyze(projectDir) {
   const assetIndex = indexAssets(path.join(projectDir, 'assets'));
   const { passages, startName, files } = loadStoryDir(path.join(projectDir, 'story'));
   const lib = loadLibrary(projectDir, assetIndex);
+  // Moods developed from the piece's own material (darkroom develop). darkroom.json always wins.
+  const moods = readMoods(projectDir);
+  if (moods) {
+    const sc = (config.scene = { ...(config.scene || {}) });
+    for (const kind of ['music', 'ambience']) {
+      sc[kind] = { ...Object.fromEntries(Object.entries(moods[kind] || {}).map(([k, v]) => [k, v.file])), ...(sc[kind] || {}) };
+    }
+    sc.looks = { ...Object.fromEntries(Object.entries(moods.moods || {}).map(([k, v]) => [k, v.look])), ...(sc.looks || {}) };
+    for (const [id, pic] of Object.entries(moods.pictures || {})) {
+      const e = lib.entries.get(id);
+      if (e) e.motifs = [...new Set([...e.motifs, ...(pic.qualities || [])])];
+    }
+  }
+  for (const e of lib.entries.values()) {
+    if (!e.motifs.length) lib.warnings.push({ file: LIBRARY_FILE, line: 0, passage: `asset ${e.id}`, msg: `"${e.id}" has no motifs yet: add some in library.json, or run darkroom develop to measure its qualities` });
+  }
   const result = compileStory({ passages, startName, config, assetIndex, library: lib.entries });
+  result.story.moodCss = moods ? [paletteCss(moods.palette), atmosphereCss(moods.moods)].filter(Boolean).join('\n') : '';
+  // atmosphere-<name> needs a developed mood of that name or your own CSS for it
+  const knownAtmos = new Set(Object.keys(moods?.moods || {}));
+  for (const css of result.story.css) for (const m of css.matchAll(/data-atmosphere=["']?([\w-]+)/g)) knownAtmos.add(m[1]);
+  const seenAtmos = new Set();
+  const walkAtmos = (ops, name) => {
+    for (const op of ops) {
+      if (op.t === 'atmosphere' && op.name !== 'none') seenAtmos.add(`${op.name}\u0000${name}`);
+      if (op.t === 'if') {
+        op.branches.forEach((b) => walkAtmos(b.ops, name));
+        if (op.else) walkAtmos(op.else, name);
+      }
+    }
+  };
+  for (const [name, ps] of Object.entries(result.story.passages)) {
+    if (ps.scene?.atmosphere) seenAtmos.add(`${ps.scene.atmosphere}\u0000${name}`);
+    walkAtmos(ps.ops, name);
+  }
+  for (const key of seenAtmos) {
+    const [a, name] = key.split('\u0000');
+    if (!knownAtmos.has(a)) result.warnings.push({ file: 'story', line: 0, passage: name, msg: `atmosphere "${a}" is not a developed mood (${[...knownAtmos].join(', ') || 'run darkroom develop'}) and no stylesheet defines it` });
+  }
   result.errors.push(...lib.errors);
   result.warnings.push(...lib.warnings);
   result.story.scene = sceneRuntime(config, result.errors);
-  if (config.style && !fs.existsSync(path.join(RUNTIME, 'themes', config.style))) {
-    result.errors.push({ file: 'darkroom.json', line: 0, passage: '', msg: `style "${config.style}" does not exist (available: ${availableStyles().join(', ') || 'none'})` });
-  }
+
   if (!files.length) result.errors.unshift({ file: 'story/', line: 0, passage: '', msg: 'no .twee, .tw or Twine .html files found in story/' });
 
   // Title screen media from darkroom.json
@@ -160,16 +192,8 @@ export function writeWebFiles(outDir, { config, story, dev = false, assetsMeta =
   fs.copyFileSync(path.join(RUNTIME, 'darkroom.js'), path.join(outDir, 'darkroom.js'));
   fs.copyFileSync(path.join(RUNTIME, 'darkroom.css'), path.join(outDir, 'darkroom.css'));
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-  const userCss = [themeCss(config.theme), ...story.css].filter(Boolean).join('\n\n');
-  // A built-in style (runtime/themes/<name>/): its CSS, plus bundled fonts if it has them.
-  let styleLinks = '';
-  const styleDir = config.style && path.join(RUNTIME, 'themes', config.style);
-  if (styleDir && fs.existsSync(styleDir)) {
-    fs.cpSync(styleDir, path.join(outDir, 'themes', config.style), { recursive: true });
-    for (const f of ['fonts.css', `${config.style}.css`]) {
-      if (fs.existsSync(path.join(styleDir, f))) styleLinks += `<link rel="stylesheet" href="themes/${config.style}/${f}">\n`;
-    }
-  }
+  const userCss = [story.moodCss, themeCss(config.theme), ...story.css].filter(Boolean).join('\n\n');
+
   const userJs = story.js.join('\n\n');
   const html = `<!doctype html>
 <html lang="${esc(config.lang || 'en')}">
@@ -180,7 +204,7 @@ export function writeWebFiles(outDir, { config, story, dev = false, assetsMeta =
 <meta name="theme-color" content="#000000">
 <title>${esc(config.title)}</title>
 <link rel="stylesheet" href="darkroom.css">
-${styleLinks}${userCss ? `<style>\n${userCss}\n</style>\n` : ''}</head>
+${userCss ? `<style>\n${userCss}\n</style>\n` : ''}</head>
 <body>
 <div id="dr"></div>
 <noscript>This story needs JavaScript.</noscript>

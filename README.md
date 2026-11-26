@@ -65,3 +65,9 @@ Requires Xcode 16 or later and an iPhone on iOS 17 or later.
 3. Grain, weighted toward the midtones, sized relative to the frame so the preview matches the photo.
 
 To retune a look, edit its values in `FilmLook.swift`.
+
+## Darkroom (visual novel system)
+
+[`darkroom/`](darkroom/) is a separate, reusable tool for building photo-driven visual novels from
+Twine/Twee stories and packaging them for itch.io (lean media, itch-safe zip checks). See
+[darkroom/README.md](darkroom/README.md).

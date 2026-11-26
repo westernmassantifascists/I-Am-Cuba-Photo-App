@@ -1,0 +1,84 @@
+:: StoryData
+{
+  "start": "Start"
+}
+
+:: StoryInit
+/* ------------------------------------------------------------------
+   A tiny sample story that uses every Darkroom feature once.
+   Replace it with your own. Each passage starts with  :: Name
+   Lines starting with @ are directives (pictures, sound, logic).
+   Every other line is a line of text: one click each.
+   ------------------------------------------------------------------ */
+@set $trust = 0
+@set $hasLetter = false
+
+:: Start {"position":"100,100"}
+@card "Chapter One" "The harbor at night"
+@bg harbor move=in time=40
+@ambience rain volume=0.5
+@music theme fade=4
+Rain on the black water. The ferry stopped running years ago.
+Somewhere behind you, a door bangs in the wind.
+@sfx door
+Stranger: You came back.
+Mara: Don't listen to him. Walk with me.
+@include Harbor choices
+
+:: Harbor choices [widget] {"position":"300,100"}
+[[Walk with Mara->Alley][$trust += 1]]
+[[Answer the stranger->Stranger]]
+@if not $hasLetter
+[[Read the letter in your pocket->Letter]]
+@endif
+
+:: Letter {"position":"300,250"}
+@image letter pos=middle fade=0.8
+The envelope is soft from the rain. The handwriting is yours, from a year you don't remember.
+*Meet me on the roof. You'll know why.*
+@set $hasLetter = true
+@image clear
+@include Harbor choices
+
+:: Stranger {"position":"500,250"}
+@fx flash
+Stranger: Everyone comes back. The city keeps what it's owed.
+When you look again, there is nobody there.
+@set $trust -= 1
+[[Find Mara->Alley]]
+
+:: Alley {"position":"500,100"}
+@bg alley fade=2 move=left time=30
+@stop ambience fade=3
+@if $trust > 0
+Mara: I knew you'd pick me.
+@elseif visited("Stranger")
+Mara: You talked to him. Everyone talks to him once.
+@else
+Mara: You took your time.
+@endif
+@if $hasLetter
+Mara: You read it, didn't you? Then you know where we're going.
+@endif
+A tram passes at the end of the street, lit up and empty.
+@video intro
+[[Climb to the roof->Rooftop]]
+[[Go home->Home]]
+
+:: Rooftop {"position":"700,50"}
+@bg rooftop fade=3
+@music stop fade=5
+@wait 1.5
+From up here the city is all black glass and white rain.
+@if $trust >= 1 and $hasLetter
+Mara: Now you remember.
+@ending remember "The Night You Remembered"
+@else
+Mara: Maybe next time.
+@ending forget "The City Keeps You"
+@endif
+
+:: Home {"position":"700,200"}
+@fx fadeout time=3
+You walk home. You don't look back.
+@ending home "Home Before Morning"

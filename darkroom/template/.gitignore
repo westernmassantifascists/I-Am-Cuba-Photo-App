@@ -1,0 +1,4 @@
+.darkroom/
+dist/
+release/
+.DS_Store

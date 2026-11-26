@@ -1,0 +1,16 @@
+{
+  "name": "darkroom-vn",
+  "version": "1.0.0",
+  "description": "Build photo-driven visual novels from Twine/Twee stories for the web and itch.io.",
+  "type": "module",
+  "bin": {
+    "darkroom": "bin/darkroom.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node test/run.mjs"
+  },
+  "license": "MIT"
+}

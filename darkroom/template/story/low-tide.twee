@@ -1,0 +1,126 @@
+:: StoryData
+{
+  "start": "Arrival"
+}
+
+:: StoryInit
+/* ------------------------------------------------------------------------------------------
+   LOW TIDE — an example of an emotion-led piece. Replace it with your own.
+
+   How it is built:
+   - Three feelings are meters (darkroom.json "meters"): longing, dread, tenderness.
+     Choices nudge them:  [[Look up->Somewhere][dread+20]]
+   - Passages name moods and motifs in their tags, never file names:
+       [motif-sea music-longing sound-sea look-vast]
+     The engine picks a picture with that motif from library.json; the meters tip the choice
+     (darkroom.json scene.weights) and set the look when a passage doesn't name one.
+   - The town walk is a pool of drifting scenes (tag drift-town). "@drift town" goes to the
+     unvisited town scene whose feel- tags best match how the player feels right now.
+   - Threshold turns (@turn) break in the moment a feeling crosses a line.
+   - The ending is chosen by the strongest feeling: dominant().
+   ------------------------------------------------------------------------------------------ */
+@set $loaf = false
+
+:: Arrival [motif-sea music-longing sound-sea look-vast shot-shore] {"position":"100,100"}
+@card "Low Tide" "A town the sea is taking back"
+The bus leaves you where the road gives up, at the edge of the town you left at seventeen.
+
+The tide is out. It goes out farther here than anywhere else on the coast: a mile of wet sand the colour of pewter, and the town sitting at the edge of it like something put down and forgotten.
+
+Your mother's house is somewhere behind the sea wall. The key is in your pocket. You don't go there yet.
+
+[[Walk along the front->@drift town else=The House]]
+
+:: The Pier [drift-town feel-longing motif-pier sound-sea] {"position":"300,50"}
+The pier is shorter than you remember. The last forty yards went into the sea one winter and nobody rebuilt them; the railings simply stop in the air.
+
+A man is fishing off the broken end, although there is no water under him for half a mile.
+
+"It comes back," he says, without turning round. "It always comes back."
+
+[[Wait with him for the water->@drift town else=The House][longing+15]]
+[[Leave him to it->@drift town else=The House][tenderness+5]]
+
+:: The Grand Hotel [drift-town feel-dread motif-facade sound-wind] {"position":"300,150"}
+The Grand has been shut for years. Plywood over the ground-floor windows, gulls in the upper ones.
+
+On the third floor a curtain moves. It is the wind; every pane up there is broken. It is the wind.
+
+You realise you have stopped walking.
+
+[[Look up at the third floor->@drift town else=The House][dread+25]]
+[[Keep your eyes on the pavement->@drift town else=The House][dread+5 tenderness+5]]
+
+:: The Bakery [drift-town feel-tenderness motif-window music-tenderness sound-silence] {"position":"300,250"}
+One light on in the whole high street: the bakery, open at an hour when nobody is buying.
+
+The woman behind the counter knew your mother. She says so twice. She gives you a loaf you didn't ask for, wrapped in yesterday's paper, still warm.
+
+@set $loaf = true
+[[Ask her what your mother was like at the end->@drift town else=The House][tenderness+15 longing+5]]
+[[Thank her and go->@drift town else=The House][tenderness+5]]
+
+:: The Cliff Path [drift-town feel-longing feel-dread motif-path sound-wind] {"position":"300,350"}
+@when $longing > 25
+The path up the headland has been crumbling for as long as you can remember. Now the fence posts lead out over nothing, a row of them standing in the air where the field used to be.
+
+From up here you can see the whole bay, and the thin bright line far out where the sea is waiting.
+
+[[Go to the edge->@drift town else=The House][dread+15 longing+10]]
+[[Turn back to the town->@drift town else=The House][tenderness+5]]
+
+:: The Bus Shelter [drift-town feel-tenderness motif-street sound-rain] {"position":"300,450"}
+Rain, sudden and sideways. You share the bus shelter with two children in one coat, both of them inside it, both of them laughing at something you can't see.
+
+When the rain stops they run off without a word, the coat flapping between them like a flag.
+
+[[Watch them go->@drift town else=The House][tenderness+10 longing+5]]
+
+:: The Water Comes In [motif-sea music-dread sound-sea look-shadowed] {"position":"550,150"}
+@turn $dread >= 55
+/* A threshold turn: it happens once, as soon as dread reaches 55, wherever the player is going. */
+@video tide
+Somewhere a siren starts. Not loud: the kind of siren that has been sounding in this town for a hundred years.
+
+The tide is turning. It doesn't come in here, it arrives. You watch the mile of sand go dark from the far edge inwards, faster than walking, faster than you could run.
+
+By the time you reach the sea wall the water is already at the steps, slapping at the stone as if it had never been away.
+
+@nudge dread+10
+[[Go on->@resume]]
+
+:: The Letter [motif-interior music-tenderness sound-silence look-candlelit] {"position":"550,300"}
+@turn $longing >= 60
+@image letter pos=middle fade=1
+In your coat, folded small, is the letter she sent the winter before. You have read it so often that the creases have gone soft as cloth.
+
+*Come when the tide is out,* she wrote. *That's when you can see what the town is standing on.*
+@image clear
+
+@nudge longing-10 tenderness+10
+[[Go on->@resume]]
+
+:: The House [motif-interior music-silence sound-silence] {"position":"800,250"}
+@sfx door
+The key turns the way it always did: a little stiff, a little to the left.
+
+Inside, everything is where she left it. Her coat on the hook. Her glasses on the windowsill, folded, facing the sea.
+
+@if dominant() is "dread"
+@look shadowed
+You don't stay the night. You lock the door, post the key back through the letterbox and catch the last bus out, with the water already over the road behind you.
+@ending leave "The Last Bus"
+@elseif dominant() is "longing"
+@motif sea look=mourning
+You sit in her chair at her window and watch the tide go out again, and come in again. In the morning you are still there.
+@ending stay "Still There at Low Tide"
+@else
+@motif warmth look=candlelit
+You light the stove. You find two plates out of habit, and put one back.
+@if $loaf
+You put the bakery loaf on her table, and for the first time in a year the house smells like someone lives in it.
+@else
+You open the windows. The sea air goes through the rooms as if it had been waiting to be let in.
+@endif
+@ending home "Someone Lives Here"
+@endif

@@ -8,6 +8,9 @@ import { loadStoryDir } from './twine.mjs';
 import { indexAssets, resolveAsset } from './assets.mjs';
 import { compileStory } from './compile.mjs';
 import { hasFfmpeg, leanAssets } from './lean.mjs';
+import { loadLibrary } from './library.mjs';
+import { translateExpr, checkExpr } from './expr.mjs';
+import { DEFAULT_LOOKS } from './project.mjs';
 
 const RUNTIME = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'runtime');
 
@@ -16,7 +19,11 @@ export function analyze(projectDir) {
   const config = loadConfig(projectDir);
   const assetIndex = indexAssets(path.join(projectDir, 'assets'));
   const { passages, startName, files } = loadStoryDir(path.join(projectDir, 'story'));
-  const result = compileStory({ passages, startName, config, assetIndex });
+  const lib = loadLibrary(projectDir, assetIndex);
+  const result = compileStory({ passages, startName, config, assetIndex, library: lib.entries });
+  result.errors.push(...lib.errors);
+  result.warnings.push(...lib.warnings);
+  result.story.scene = sceneRuntime(config, result.errors);
   if (!files.length) result.errors.unshift({ file: 'story/', line: 0, passage: '', msg: 'no .twee, .tw or Twine .html files found in story/' });
 
   // Title screen media from darkroom.json
@@ -50,9 +57,43 @@ export function analyze(projectDir) {
   for (const p of Object.values(result.story.passages)) walk(p.ops);
   result.story.endings = [...endings.values()];
 
+  // Library entries whose files ship with the game (the engine picks among these by motif).
+  result.story.library = [...lib.entries.values()]
+    .filter((e) => result.usedAssets.has(e.rel))
+    .map((e) => ({ id: e.id, src: e.rel, type: e.type, motifs: e.motifs, ...(e.repeat ? {} : { repeat: false }), ...(e.focal ? { focal: e.focal } : {}), ...(e.still ? { still: e.still } : {}) }));
+
   const used = [...result.usedAssets.keys()].map((rel) => assetIndex.files.get(rel)).filter(Boolean);
   result.bytes = used.reduce((n, f) => n + f.bytes, 0);
   return { config, assetIndex, result, used };
+}
+
+// darkroom.json "scene" -> what the player needs, with conditions translated to JavaScript.
+function sceneRuntime(config, errors) {
+  const sc = config.scene || {};
+  const js = (src, where) => {
+    const t = translateExpr(src);
+    try {
+      checkExpr(t);
+    } catch (e) {
+      errors.push({ file: 'darkroom.json', line: 0, passage: where, msg: `bad expression "${src}": ${e.message}` });
+    }
+    return t;
+  };
+  const out = {
+    looks: { ...DEFAULT_LOOKS, ...(sc.looks || {}) },
+    look_floor: sc.look_floor || null,
+    look_rules: (sc.look_rules || []).map((r, i) => ({ js: js(r.when, `scene.look_rules[${i}]`), look: r.look })),
+    weights: (sc.weights || []).map((w, i) => ({ js: js(w.when, `scene.weights[${i}]`), favor: w.favor || {} })),
+    volume: { music: 1, ambience: 1, ...(sc.volume || {}) },
+    first_run_shots: sc.first_run_shots !== false,
+  };
+  if (sc.mix) {
+    out.mix = {};
+    for (const k of ['music', 'ambience']) {
+      if (sc.mix[k]) out.mix[k] = { js: js(sc.mix[k], `scene.mix.${k}`), range: sc.mix[`${k}_range`] || [0, 1] };
+    }
+  }
+  return out;
 }
 
 function rewriteAssets(story, map) {
@@ -70,12 +111,14 @@ function rewriteAssets(story, map) {
   for (const p of Object.values(story.passages)) {
     walk(p.ops);
     p.assets = p.assets.map(fix);
+    if (p.scene) for (const k of ['music', 'ambience']) if (p.scene[k]) p.scene[k] = fix(p.scene[k]);
   }
   walk(story.init);
+  for (const e of story.library || []) e.src = fix(e.src);
 }
 
 function publicConfig(config) {
-  const { lean, itch, theme, ...rest } = config;
+  const { lean, itch, theme, scene, ...rest } = config;
   return rest;
 }
 
@@ -95,6 +138,10 @@ export function writeWebFiles(outDir, { config, story, dev = false, assetsMeta =
     init: story.init,
     passages: story.passages,
     endings: story.endings,
+    pools: story.pools,
+    turns: story.turns,
+    library: story.library || [],
+    scene: story.scene,
     assets: assetsMeta,
   };
   if (dev) {

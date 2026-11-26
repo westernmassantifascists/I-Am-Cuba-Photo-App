@@ -7,7 +7,9 @@ import { packageProject, itchCheck } from '../lib/package.mjs';
 import { serve, preview } from '../lib/serve.mjs';
 import { newProject } from '../lib/scaffold.mjs';
 import { importTwine } from '../lib/importer.mjs';
-import { printReport, mb, red, green, bold, dim, loadConfig } from '../lib/project.mjs';
+import { printReport, mb, red, green, yellow, bold, dim, loadConfig } from '../lib/project.mjs';
+import { syncLibrary, loadLibrary, motifIndex } from '../lib/library.mjs';
+import { indexAssets, resolveAsset } from '../lib/assets.mjs';
 
 const HELP = `
 ${bold('darkroom')} — photo visual novels from Twine stories, ready for itch.io
@@ -21,6 +23,7 @@ ${bold('darkroom')} — photo visual novels from Twine stories, ready for itch.i
   darkroom package [project] [--no-lean]   shrink media, check itch.io limits, write release/*.zip
   darkroom preview [folder]                play a built folder (default: dist/) locally
   darkroom size [project]                  where the megabytes go
+  darkroom library [project] [--prune]     add new photos/videos to library.json, list motifs
 
   [project] defaults to the current folder. Add --verbose for full lists.
 `;
@@ -96,6 +99,22 @@ async function main() {
       let dir = project;
       if (fs.existsSync(path.join(dir, 'darkroom.json'))) dir = path.join(dir, 'dist');
       await preview(dir, { port: Number(flags.port) || 8080 });
+      return;
+    }
+    case 'library': {
+      const idx = indexAssets(path.join(project, 'assets'));
+      const ts = loadConfig(project).title_screen;
+      const titleBg = ts.background && resolveAsset(idx, ts.background, 'bg').rel;
+      const r = syncLibrary(project, idx, { prune: !!flags.prune, exclude: titleBg ? [titleBg] : [] });
+      console.log(`library.json: ${r.total} pictures and videos${r.added.length ? `, ${green(`${r.added.length} added`)}` : ''}${r.pruned.length ? `, ${r.pruned.length} removed` : ''}`);
+      if (r.added.length) console.log(dim(`  added: ${r.added.join(', ')}`));
+      if (r.missing.length && !r.pruned.length) console.log(`${yellow('warning')} ${r.missing.length} entries point to files that are gone (darkroom library --prune removes them): ${r.missing.join(', ')}`);
+      if (r.untagged.length) console.log(`${yellow('to do')}   give these motifs in library.json: ${r.untagged.join(', ')}`);
+      const counts = motifIndex(loadLibrary(project, idx).entries);
+      if (counts.size) {
+        console.log(bold('\nMotifs (pictures per motif):'));
+        console.log(`  ${[...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([m, n]) => `${m} ${dim(n)}`).join('   ')}`);
+      }
       return;
     }
     case 'size': {

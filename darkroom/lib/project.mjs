@@ -2,6 +2,32 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+// Visual "looks" for backgrounds: how strongly the photo shows and with what CSS filter.
+// These are The Dead City's psychological states; add or override them in darkroom.json scene.looks.
+export const DEFAULT_LOOKS = {
+  neutral: { opacity: 1, filter: '' },
+  quiet: { opacity: 0.9, filter: 'saturate(0.8)' },
+  mourning: { opacity: 0.85, filter: 'saturate(0.5) brightness(0.95)' },
+  shadowed: { opacity: 0.7, filter: 'brightness(0.7)' },
+  dimmed: { opacity: 0.6, filter: 'brightness(0.6)' },
+  desaturated: { opacity: 1, filter: 'saturate(0.4)' },
+  ghostly: { opacity: 0.5, filter: 'brightness(1.2) saturate(0)' },
+  candlelit: { opacity: 0.85, filter: 'sepia(0.2) brightness(1.1)' },
+  luminous: { opacity: 1, filter: 'brightness(1.15)' },
+  windswept: { opacity: 0.9, filter: 'contrast(1.1)' },
+  vast: { opacity: 0.95, filter: 'contrast(0.9)' },
+  duplicated: { opacity: 0.8, filter: 'hue-rotate(180deg) saturate(0.3)' },
+  uncanny: { opacity: 0.75, filter: 'brightness(1.3) invert(0.1)' },
+  chaotic: { opacity: 1, filter: 'blur(2px)' },
+  fading: { opacity: 0.5, filter: 'saturate(0.2)' },
+  warped: { opacity: 0.9, filter: 'contrast(1.2) saturate(0.7)' },
+  doorway: { opacity: 1, filter: '' },
+  ethereal: { opacity: 0.8, filter: 'brightness(1.2) saturate(0.3)' },
+  waiting: { opacity: 0.9, filter: 'brightness(0.95)' },
+  intimate: { opacity: 0.95, filter: 'sepia(0.1) brightness(0.98)' },
+  empty: { opacity: 0.85, filter: 'saturate(0.3) brightness(0.85)' },
+};
+
 export const DEFAULTS = {
   id: '',
   title: 'Untitled',

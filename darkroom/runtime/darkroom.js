@@ -14,6 +14,9 @@
   const KEY = `darkroom:${C.id || C.title || 'story'}`;
   const DEV = !!STORY.dev;
   const SLOTS = 6;
+  const SC = STORY.scene || { looks: {}, look_rules: [], weights: [], volume: { music: 1, ambience: 1 } };
+  const LIB = new Map((STORY.library || []).map((a) => [a.id, a]));
+  const METERS = C.meters || {};
 
   // ---------------------------------------------------------------- storage
   // Browser storage can be unavailable (private mode, blocked third-party storage in an iframe).
@@ -67,6 +70,11 @@
     history: [],
     log: [],
     started: false,
+    used: {}, // library ids with repeatAllowed:false already shown this playthrough
+    runCounted: false, // has this playthrough already reached an ending?
+    lastByMotif: {},
+    fired: {}, // threshold turns that have happened
+    resumeTo: null, // where the player was heading when a turn interrupted
   };
 
   const H = {
@@ -77,6 +85,14 @@
     turns: () => G.turns,
     passage: () => G.passage,
     previous: () => G.prev,
+    runs: () => store.get('runs', 0), // finished playthroughs (an @ending was reached)
+    clamp: (v, lo, hi) => Math.max(lo, Math.min(hi, v)),
+    // the strongest meter right now, e.g. "dread"
+    dominant: () => {
+      let best = null;
+      for (const k of Object.keys(METERS)) if (best === null || (Number(S[k]) || 0) > (Number(S[best]) || 0)) best = k;
+      return best;
+    },
     Math,
   };
 
@@ -304,10 +320,116 @@
     const fit = op.fit || C.bg_fit || 'cover';
     el.style.objectFit = fit;
     el.style.objectPosition = op.pos || 'center';
-    if (op.filter) el.style.filter = op.filter;
     if (op.move) {
       el.classList.add(`dr-move-${op.move}`);
       el.style.animationDuration = `${op.time || 20}s`;
+    }
+  }
+
+  // ---------------------------------------------------------------- looks & the media library
+  function lookStyle(name) {
+    const L = (SC.looks && (SC.looks[name] || SC.looks.neutral)) || { opacity: 1, filter: '' };
+    let opacity = L.opacity ?? 1;
+    let filter = L.filter || '';
+    const fl = SC.look_floor;
+    if (fl) {
+      // "publish-safe" floor: never let a look make the photo too faint or too dark
+      if (fl.opacity != null) opacity = Math.max(opacity, fl.opacity);
+      if (fl.brightness != null) filter = filter.replace(/brightness\(([\d.]+)\)/g, (m, v) => `brightness(${Math.max(+v, fl.brightness)})`);
+    }
+    return { opacity, filter };
+  }
+  function lookFromRules() {
+    for (const r of SC.look_rules || []) if (evaluate(r.js)) return r.look;
+    return null;
+  }
+  function styleLayer(el, op) {
+    const look = op.look ? lookStyle(op.look) : { opacity: 1, filter: '' };
+    el.style.setProperty('--dr-look-opacity', look.opacity);
+    el.style.filter = [look.filter, op.filter].filter(Boolean).join(' ');
+  }
+  function setLook(name) {
+    if (!G.media.bg) return;
+    G.media.bg.look = name;
+    const el = bgEl.lastElementChild;
+    if (el) styleLayer(el, G.media.bg);
+    root.dataset.look = name || '';
+  }
+
+  // Choose a picture for a motif the way The Dead City does: every candidate starts equal, the
+  // meters favour some motifs (darkroom.json scene.weights), the best-scoring ones form a pool, and
+  // the picture shown last time for this motif is avoided if there is any alternative.
+  function pickMotif(motif) {
+    const all = (STORY.library || []).filter((a) => a.motifs.includes(motif));
+    let cands = all.filter((a) => a.repeat !== false || !G.used[a.id]);
+    if (!cands.length) cands = all;
+    if (!cands.length) return null;
+    const bonus = {};
+    for (const w of SC.weights || []) {
+      if (evaluate(w.js)) for (const [m, v] of Object.entries(w.favor)) bonus[m] = (bonus[m] || 0) + v;
+    }
+    const scored = cands.map((a) => ({ a, s: a.motifs.reduce((n, m) => n + (bonus[m] || 0), 0) }));
+    const best = Math.max(...scored.map((x) => x.s));
+    let pool = scored.filter((x) => x.s === best).map((x) => x.a);
+    const last = G.lastByMotif[motif];
+    if (pool.length > 1 && last) pool = pool.filter((a) => a.id !== last);
+    const chosen = pool[Math.floor(Math.random() * pool.length)];
+    G.lastByMotif[motif] = chosen.id;
+    return chosen;
+  }
+  function showLibrary(a, opts = {}) {
+    if (a.repeat === false) G.used[a.id] = true;
+    const still = a.still && LIB.get(a.still);
+    return setBg({ t: a.type === 'video' ? 'bgvideo' : 'bg', src: a.src, id: a.id, pos: a.focal || undefined, look: opts.look || undefined, still: still ? still.src : undefined, fade: opts.fade, move: opts.move });
+  }
+
+  function mixVolume(kind) {
+    const m = SC.mix && SC.mix[kind];
+    if (m) {
+      const v = Number(evaluate(m.js));
+      if (Number.isFinite(v)) return Math.max(m.range[0], Math.min(m.range[1], v));
+    }
+    return SC.volume?.[kind] ?? 1;
+  }
+  function playMood(kind, src, fade, volume) {
+    const vol = volume ?? mixVolume(kind);
+    G.media[kind] = src ? { src, volume: vol, loop: true, mixed: volume == null } : null;
+    A.play(kind, src, { fade, volume: vol, loop: true });
+    if (A.ch[kind]) A.ch[kind].mixed = volume == null;
+  }
+
+  // Passage tags (motif-, music-, sound-, atmosphere-, overlay-, look-, shot-) set the scene before
+  // the passage's own lines run; @bg / @music lines inside the passage still have the last word.
+  function applyScene(name) {
+    const sc = P[name].scene;
+    document.body.dataset.passage = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    if (!sc) {
+      remix();
+      return;
+    }
+    if ('music' in sc) playMood('music', sc.music, 2);
+    if ('ambience' in sc) playMood('ambience', sc.ambience, 2);
+    remix();
+    const look = sc.look || lookFromRules() || 'neutral';
+    let a = null;
+    const firstTime = G.visited[name] === 1 && H.runs() === 0;
+    if (sc.shot && (!sc.motif || (SC.first_run_shots !== false && firstTime))) a = LIB.get(sc.shot);
+    if (!a && sc.motif) a = pickMotif(sc.motif);
+    if (!a && sc.shot) a = LIB.get(sc.shot);
+    if (a) showLibrary(a, { look });
+    else setLook(look);
+    root.dataset.look = look;
+    root.dataset.atmosphere = sc.atmosphere || '';
+    root.dataset.overlay = sc.overlay || '';
+  }
+  // Volumes that follow the meters (darkroom.json scene.mix), re-applied on every passage.
+  function remix() {
+    for (const k of ['music', 'ambience']) {
+      const t = A.ch[k];
+      if (t && t.mixed && SC.mix && SC.mix[k]) {
+        t.vol = mixVolume(k);
+        A.ramp(t, t.vol, 0.8);
+      }
     }
   }
 
@@ -331,6 +453,12 @@
       el.setAttribute('playsinline', '');
       el.src = url(op.src);
       el.play().catch(() => {});
+      if (op.still) {
+        // a video that cannot play (codec, network) falls back to its still picture
+        el.addEventListener('error', () => {
+          if (G.media.bg && G.media.bg.src === op.src) setBg({ ...op, t: 'bg', src: op.still, still: undefined }, true);
+        });
+      }
     } else {
       el = h('img', 'dr-layer');
       el.alt = '';
@@ -338,6 +466,8 @@
       el.src = url(op.src);
     }
     applyBgStyle(el, op);
+    styleLayer(el, op);
+    if (op.look) root.dataset.look = op.look;
     el.style.transitionDuration = `${fade}s`;
     bgEl.appendChild(el);
     if (el.decode) await Promise.race([el.decode().catch(() => {}), sleep(1500)]);
@@ -383,7 +513,10 @@
     for (const op of Object.values(m.images || {})) setImage(op, true);
     for (const k of ['music', 'ambience']) {
       const want = m[k];
-      if (want) A.play(k, want.src, { fade: 0.8, volume: want.volume, loop: want.loop });
+      if (want) {
+        A.play(k, want.src, { fade: 0.8, volume: want.volume, loop: want.loop });
+        if (A.ch[k]) A.ch[k].mixed = !!want.mixed;
+      }
       else A.play(k, null, { fade: 0.8 });
     }
     showBox(m.textbox !== false);
@@ -468,8 +601,67 @@
   let runId = 0;
   let passageCps = null;
 
+  // ---------------------------------------------------------------- emotion-led structure
+  // Every move (choice, link, @goto) goes through here, so that
+  //  - "@drift town else=Evening" becomes the unvisited town scene that best fits the current feelings,
+  //  - "@resume" returns to where the player was heading before a threshold turn,
+  //  - a threshold turn (@turn $dread >= 60) takes over the moment its condition is true.
+  // Change meters, kept within their min/max (0–100 unless darkroom.json says otherwise).
+  function nudge(changes) {
+    for (const [k, v] of Object.entries(changes || {})) {
+      const m = METERS[k] || {};
+      const lo = m.min ?? (METERS[k] ? 0 : -Infinity);
+      const hi = m.max ?? (METERS[k] ? 100 : Infinity);
+      S[k] = Math.max(lo, Math.min(hi, (Number(S[k]) || 0) + v));
+    }
+    emit('meters', S);
+  }
+
+  function resolveTarget(target) {
+    const t = String(target || '').trim();
+    if (t === '@resume') return G.resumeTo && P[G.resumeTo] ? G.resumeTo : null;
+    const m = t.match(/^@drift\s+(\S+)(?:\s+else\s*=\s*(.+))?$/);
+    if (m) return drift(m[1]) || (m[2] ? m[2].trim().replace(/^(["'])(.*)\1$/, '$2') : null);
+    return t;
+  }
+
+  function drift(pool) {
+    const cands = (STORY.pools?.[pool] || []).filter((n) => !G.visited[n] && n !== G.passage && (!P[n].when || evaluate(P[n].when)));
+    if (!cands.length) return null;
+    // fit = sum of the meters the scene is tagged to feel (feel-dread feel-longing ...)
+    const fit = (n) => (P[n].feel || []).reduce((sum, f) => sum + (Number(S[f]) || 0), 0);
+    const best = Math.max(...cands.map(fit));
+    const top = cands.filter((n) => fit(n) === best);
+    return top[Math.floor(Math.random() * top.length)];
+  }
+
+  function turnFor(target) {
+    for (const t of STORY.turns || []) {
+      if (t.passage === target || t.passage === G.passage) continue;
+      if (t.once && G.fired[t.passage]) continue;
+      if (evaluate(t.js)) return t;
+    }
+    return null;
+  }
+
+  function go(target) {
+    const resolved = resolveTarget(target);
+    if (!resolved || !P[resolved]) {
+      toast(resolved ? `No passage named "${esc(resolved)}"` : `Nowhere to go from "${esc(target)}" — every scene is used up`, 'error');
+      return;
+    }
+    const t = turnFor(resolved);
+    if (t) {
+      G.fired[t.passage] = true;
+      G.resumeTo = resolved;
+      emit('turn', t.passage);
+      return enter(t.passage);
+    }
+    return enter(resolved);
+  }
+
   function snapshot(name) {
-    return { passage: name, S: clone(S), visited: clone(G.visited), turns: G.turns, prev: G.prev, media: clone(G.media) };
+    return { passage: name, S: clone(S), visited: clone(G.visited), turns: G.turns, prev: G.prev, media: clone(G.media), used: clone(G.used), runCounted: G.runCounted, fired: clone(G.fired), resumeTo: G.resumeTo };
   }
 
   function restore(snap) {
@@ -478,6 +670,10 @@
     G.turns = snap.turns;
     G.prev = snap.prev;
     G.media = clone(snap.media);
+    G.used = clone(snap.used || {});
+    G.runCounted = !!snap.runCounted;
+    G.fired = clone(snap.fired || {});
+    G.resumeTo = snap.resumeTo || null;
     applyMedia(G.media);
   }
 
@@ -506,6 +702,7 @@
       pageEl.innerHTML = '';
       pageScroll.scrollTop = 0;
     }
+    applyScene(name);
     emit('passage', name);
     const choices = [];
     const r = await run(P[name].ops, id, choices);
@@ -538,6 +735,10 @@
         return;
       case 'music':
       case 'ambience':
+        if (op.mood) {
+          playMood(op.t, op.src, fadeOf(op.fade, 2), op.volume);
+          return;
+        }
         G.media[op.t] = op.src ? { src: op.src, volume: op.volume, loop: op.loop } : null;
         A.play(op.t, op.src, { fade: fadeOf(op.fade, op.t === 'music' ? 2 : 1.5), volume: op.volume, loop: op.loop });
         return;
@@ -569,9 +770,22 @@
         const ops = b ? b.ops : op.else;
         return ops ? run(ops, id, choices) : undefined;
       }
-      case 'goto':
-        setTimeout(() => id === runId && enter(op.target), 0);
+      case 'goto': {
+        const target = op.special || (op.js ? evaluate(op.js) : op.target);
+        setTimeout(() => id === runId && go(target), 0);
         return 'stop';
+      }
+      case 'motif': {
+        const a = pickMotif(op.motif);
+        if (a) showLibrary(a, { look: op.look || G.media.bg?.look || lookFromRules() || undefined, fade: op.fade });
+        return;
+      }
+      case 'look':
+        setLook(op.look);
+        return;
+      case 'nudge':
+        nudge(op.changes);
+        return;
       case 'include':
         return run(P[op.target]?.ops || [], id, choices);
       case 'ending':
@@ -606,7 +820,7 @@
     G.log.push({ who: whoName, html });
     if (G.log.length > 400) G.log.shift();
     if (PAGE) {
-      const p = h('p', op.who ? 'said' : '', (whoName ? `<b class="who" style="color:${esc(who.color || '')}">${esc(whoName)}</b> ` : '') + html);
+      const p = h(op.block ? 'div' : 'p', op.block ? 'dr-block' : op.who ? 'said' : '', (whoName ? `<b class="who" style="color:${esc(who.color || '')}">${esc(whoName)}</b> ` : '') + html);
       pageEl.appendChild(p);
       requestAnimationFrame(() => p.classList.add('on'));
       return;
@@ -649,7 +863,8 @@
         if (id !== runId) return;
         A.unlock();
         if (c.set) evaluate(c.set, true);
-        enter(c.target);
+        if (c.nudge) nudge(c.nudge);
+        go(c.target);
       };
       choicesEl.appendChild(b);
     });
@@ -660,6 +875,10 @@
 
   function unlockEnding(op) {
     G.endingHere = true;
+    if (!G.runCounted) {
+      G.runCounted = true;
+      store.set('runs', H.runs() + 1);
+    }
     if (!endings[op.id]) {
       endings[op.id] = { title: op.title, date: Date.now() };
       store.set('endings', endings);
@@ -958,9 +1177,14 @@
       return;
     }
     S = {};
+    for (const [k, m] of Object.entries(METERS)) S[k] = m.start ?? m.min ?? 0;
     G.visited = {};
     G.turns = 0;
     G.prev = null;
+    G.used = {};
+    G.runCounted = false;
+    G.fired = {};
+    G.resumeTo = null;
     G.media = { bg: null, images: {}, music: null, ambience: null, textbox: true };
     applyMedia(G.media);
     const id = ++runId;
@@ -985,7 +1209,8 @@
     if (link) {
       e.stopPropagation();
       if (link.dataset.set) evaluate(link.dataset.set, true);
-      enter(link.dataset.goto);
+      if (link.dataset.nudge) nudge(JSON.parse(link.dataset.nudge));
+      go(link.dataset.goto);
       return;
     }
     const btn = e.target.closest('.dr-bar button');
@@ -1074,7 +1299,13 @@
       S = v;
     },
     helpers: H,
-    go: (name) => enter(name),
+    get media() {
+      return G.media; // current background, music and ambience
+    },
+    get passage() {
+      return G.passage;
+    },
+    go: (name) => go(name),
     on: (ev, f) => (listeners[ev] ||= []).push(f),
     story: STORY,
     toast,

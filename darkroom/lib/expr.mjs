@@ -54,6 +54,8 @@ export function translateExpr(src) {
       let t = seg.text;
       t = t.replace(/\bis\s+not\b/g, 'isnot');
       t = t.replace(/\$([A-Za-z_][\w]*)/g, 'S.$1');
+      // SugarCube temporary variables (_name) are kept alongside the story variables.
+      t = t.replace(/(^|[^\w$.])_([A-Za-z][\w]*)/g, '$1S._$2');
       t = t.replace(/(^|[^.\w$])(to|isnot|is|eq|neq|and|or|not|gte|gt|lte|lt)(?![\w$])/g, (m, pre, w) => `${pre}${WORD_OPS[w]}`);
       return t;
     })
@@ -81,7 +83,7 @@ export function assignedIn(src) {
 }
 
 // Helper names the runtime exposes inside expressions. Keep in sync with runtime/darkroom.js.
-export const HELPERS = ['visited', 'random', 'either', 'ending', 'turns', 'passage', 'previous', 'Math'];
+export const HELPERS = ['visited', 'random', 'either', 'ending', 'turns', 'passage', 'previous', 'runs', 'clamp', 'Math'];
 
 // Throws a SyntaxError if the translated expression is not valid JavaScript.
 export function checkExpr(js, asStatement = false) {

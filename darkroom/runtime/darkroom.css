@@ -26,8 +26,8 @@ button { font: inherit; color: inherit; }
 
 /* ---------- pictures ---------- */
 .dr-bg, .dr-images, .dr-fx, .dr-title-bg { position: absolute; inset: 0; }
-.dr-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s ease; }
-.dr-layer.on { opacity: 1; }
+.dr-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition-property: opacity, filter; transition-duration: 1s; transition-timing-function: ease; }
+.dr-layer.on { opacity: var(--dr-look-opacity, 1); }
 .dr-move-in { animation: dr-in 20s ease-out forwards; }
 .dr-move-out { animation: dr-out 20s ease-out forwards; }
 .dr-move-left { animation: dr-left 20s ease-in-out forwards; }
@@ -106,6 +106,8 @@ button { font: inherit; color: inherit; }
 .dr-page-inner { max-width: 680px; margin: 0 auto; padding: 12vh 24px 20vh; font-size: var(--dr-text-size); line-height: 1.65; }
 .dr-page-inner p { opacity: 0; transition: opacity 0.6s; margin: 0 0 1em; }
 .dr-page-inner p.on { opacity: 1; }
+.dr-page-inner .dr-block { opacity: 0; transition: opacity 0.6s; margin: 0 0 1em; }
+.dr-page-inner .dr-block.on { opacity: 1; }
 .dr-page-inner .who { letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.85em; }
 .mode-page .dr-choices { position: static; transform: none; width: auto; margin-top: 2em; }
 

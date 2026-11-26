@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "description": "Media library: every picture and video, tagged with the motifs it can stand for. Passages ask for a motif; the engine picks one of these. Run `darkroom library` after adding files.",
+    "totalAssets": 11
+  },
+  "assets": [
+    { "id": "shore", "category": "Sea", "file": "bg/shore.jpg", "type": "image", "motifs": ["sea", "horizon", "distance", "cold"], "repeatAllowed": true },
+    { "id": "pier", "category": "Sea", "file": "bg/pier.jpg", "type": "image", "motifs": ["pier", "sea", "distance", "waiting"], "repeatAllowed": true },
+    { "id": "nightsea", "category": "Sea", "file": "bg/nightsea.jpg", "type": "image", "motifs": ["sea", "night", "shadow", "dark"], "repeatAllowed": true },
+    { "id": "waves", "category": "Sea", "file": "bg/waves.mp4", "type": "video", "motifs": ["sea", "water", "horizon", "motion"], "repeatAllowed": true, "still": "shore" },
+    { "id": "hotel", "category": "Town", "file": "bg/hotel.jpg", "type": "image", "motifs": ["facade", "window", "shadow", "empty"], "repeatAllowed": true },
+    { "id": "bakery", "category": "Town", "file": "bg/bakery.jpg", "type": "image", "motifs": ["window", "street", "light", "warmth"], "repeatAllowed": true },
+    { "id": "shelter", "category": "Town", "file": "bg/shelter.jpg", "type": "image", "motifs": ["street", "rain", "waiting", "light"], "repeatAllowed": true },
+    { "id": "rainwindow", "category": "Town", "file": "bg/rainwindow.mp4", "type": "video", "motifs": ["rain", "window", "waiting", "street"], "repeatAllowed": true, "still": "shelter" },
+    { "id": "cliff", "category": "Headland", "file": "bg/cliff.jpg", "type": "image", "motifs": ["path", "edge", "wind", "distance"], "repeatAllowed": true, "focal": "left center" },
+    { "id": "house", "category": "House", "file": "bg/house.jpg", "type": "image", "motifs": ["interior", "room", "memory", "empty"], "repeatAllowed": true },
+    { "id": "kitchen", "category": "House", "file": "bg/kitchen.jpg", "type": "image", "motifs": ["interior", "light", "warmth", "memory"], "repeatAllowed": false }
+  ]
+}

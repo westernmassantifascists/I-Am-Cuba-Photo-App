@@ -1,21 +1,63 @@
 {
-  "title": "Untitled",
+  "title": "Low Tide",
   "id": "",
   "author": "",
-  "start": "Start",
-  "mode": "vn",
-  "beat": "line",
-  "typewriter": 40,
-  "bg_fade": 1,
+  "start": "Arrival",
+  "mode": "page",
+  "beat": "paragraph",
+  "typewriter": 0,
+  "bg_fade": 1.5,
   "bg_fit": "cover",
-  "characters": {
-    "Mara": { "color": "#d9b382" },
-    "Stranger": { "name": "???", "color": "#9fb4c7" }
+  "meters": {
+    "longing": { "start": 20, "min": 0, "max": 100 },
+    "dread": { "start": 10, "min": 0, "max": 100 },
+    "tenderness": { "start": 10, "min": 0, "max": 100 }
   },
+  "scene": {
+    "music": {
+      "longing": "music/longing",
+      "dread": "music/dread",
+      "tenderness": "music/tenderness",
+      "silence": null
+    },
+    "ambience": {
+      "sea": "ambience/waves",
+      "wind": "ambience/wind",
+      "rain": "ambience/rain",
+      "silence": null
+    },
+    "aliases": {
+      "motif": { "room": "interior" },
+      "sound": { "water": "sea" },
+      "atmosphere": {}
+    },
+    "volume": { "music": 0.6, "ambience": 0.35 },
+    "mix": {
+      "music": "0.45 + $longing * 0.003 - $dread * 0.001",
+      "music_range": [0.2, 0.8],
+      "ambience": "0.2 + $dread * 0.004",
+      "ambience_range": [0.1, 0.7]
+    },
+    "weights": [
+      { "when": "$dread > 50", "favor": { "shadow": 15, "night": 10, "empty": 10 } },
+      { "when": "$longing > 50", "favor": { "distance": 15, "horizon": 10, "waiting": 10 } },
+      { "when": "$tenderness > 50", "favor": { "light": 15, "warmth": 10, "interior": 10 } }
+    ],
+    "look_rules": [
+      { "when": "$dread >= 70", "look": "shadowed" },
+      { "when": "$dread >= 45", "look": "waiting" },
+      { "when": "$longing >= 60", "look": "mourning" },
+      { "when": "$tenderness >= 50", "look": "candlelit" },
+      { "when": "$longing >= 35", "look": "quiet" }
+    ],
+    "look_floor": { "opacity": 0.8, "brightness": 0.85 },
+    "first_run_shots": true
+  },
+  "characters": {},
   "title_screen": {
     "background": "title",
-    "music": null,
-    "subtitle": ""
+    "music": "music/longing",
+    "subtitle": "A town the sea is taking back"
   },
   "theme": {},
   "lean": {

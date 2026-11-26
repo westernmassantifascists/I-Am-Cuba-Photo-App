@@ -14,10 +14,16 @@ It does by default what The Dead City's release needed by hand:
 
 No npm packages to install. Needs **Node 20+** and, for lean builds, **ffmpeg**.
 
+Windows (PowerShell):
+
 ```
-brew install node ffmpeg          # macOS (Homebrew)
-cd darkroom && npm link           # makes the `darkroom` command available everywhere
+winget install OpenJS.NodeJS.LTS Gyan.FFmpeg
+cd darkroom
+npm link                          # makes the `darkroom` command available everywhere
 ```
+
+Close and reopen PowerShell after installing so it finds `node` and `ffmpeg`.
+On macOS: `brew install node ffmpeg`, then `npm link` in the `darkroom` folder.
 
 (Without `npm link`, run `node path/to/darkroom/bin/darkroom.mjs …` instead of `darkroom …`.)
 
@@ -147,7 +153,7 @@ Lines starting with `@`. Options are `key=value`, times are in seconds.
 
 Write the name without the folder or extension: `@bg harbor` finds `assets/bg/harbor.jpg` (or .webp,
 .png, …). Subfolders work: `@bg night/harbor`. Names are **case-sensitive** — `Harbor.JPG` and
-`harbor.jpg` are different files on itch.io even though they are the same on a Mac, so `darkroom check`
+`harbor.jpg` are different files on itch.io even though they are the same on Windows and Mac, so `darkroom check`
 reports this as an error instead of letting it break online.
 
 Formats that play everywhere: JPEG/PNG/WebP photos, MP3/M4A audio, MP4 (H.264) video. Lean builds
@@ -167,7 +173,7 @@ story in `story/` (a `.twee` *and* an `.html` of the same story would give dupli
 ## Bringing The Dead City (or any Twine game) in
 
 ```
-darkroom import ~/Desktop/the-dead-city ./dead-city
+darkroom import "$HOME\Desktop\the-dead-city-itch-lean-final-2026-08-14-v6-itchsafe" dead-city
 ```
 
 The source can be a published game (`.html`), a Twine archive, `.twee` files, or a whole folder. The importer:
@@ -236,7 +242,7 @@ and add helpers for conditions with `Darkroom.helpers.myHelper = …`.
 - **View** (H) hides the text so the photograph can be seen whole.
 - Settings for music volume, sound volume, text speed and auto speed — remembered between visits.
 - Keyboard: Space/Enter/→ next, 1–9 choose, ← back, H view, A auto, S skip, L log, F fullscreen, Esc menu.
-- Works on iPhone/iPad Safari (sound plays even with the ringer switch off, volume control works),
+- Works on Windows, Mac and Android browsers and on iPhone/iPad Safari (sound plays even with the ringer switch off, volume control works),
   desktop browsers, and inside itch.io's frame. The next passages' photos are loaded in advance.
 
 While using `darkroom serve`, press <code>`</code> (backtick) in the game to jump to any passage or edit variables.

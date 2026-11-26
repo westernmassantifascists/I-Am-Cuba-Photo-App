@@ -2,7 +2,7 @@
 // Authors can write `@bg harbor`, `@bg harbor.jpg` or `@bg night/harbor.jpg`; the resolver looks in
 // the folder that matches the directive first (assets/bg/ for @bg), then in assets/ itself.
 // Paths are matched case-sensitively, because itch.io's servers are case-sensitive even when your
-// Mac's disk is not — a case-only mismatch is reported as an error instead of breaking online.
+// Windows or Mac disk is not — a case-only mismatch is reported as an error instead of breaking online.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -79,7 +79,7 @@ export function resolveAsset(index, ref, kind = 'any') {
       }
     }
   }
-  // Case-insensitive near miss: works on a Mac, breaks on itch.io.
+  // Case-insensitive near miss: works on Windows/Mac, breaks on itch.io.
   for (const c of candidates) {
     const low = c.toLowerCase();
     if (hasExt && index.lower.has(low)) {

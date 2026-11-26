@@ -140,7 +140,7 @@ export async function build(projectDir, { lean = false, outDir, quiet = false, v
   let map = new Map(used.map((f) => [f.rel, { rel: f.rel, abs: f.abs, bytes: f.bytes }]));
   if (lean) {
     if (!hasFfmpeg()) {
-      console.log(yellow('warning') + ' ffmpeg not found, so media is copied unchanged. Install it to shrink the build (Mac: brew install ffmpeg).');
+      console.log(yellow('warning') + ' ffmpeg not found, so media is copied unchanged. Install it to shrink the build (Windows: winget install Gyan.FFmpeg, Mac: brew install ffmpeg).');
     } else {
       const list = used.map((f) => ({ file: f, kinds: result.usedAssets.get(f.rel).kinds }));
       const cacheDir = path.join(projectDir, '.darkroom', 'cache');

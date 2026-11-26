@@ -14,6 +14,11 @@ import { DEFAULT_LOOKS } from './project.mjs';
 
 const RUNTIME = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'runtime');
 
+export function availableStyles() {
+  const dir = path.join(RUNTIME, 'themes');
+  return fs.existsSync(dir) ? fs.readdirSync(dir).filter((d) => fs.existsSync(path.join(dir, d, `${d}.css`))) : [];
+}
+
 // Compile without writing anything. Used by check, build, serve and package.
 export function analyze(projectDir) {
   const config = loadConfig(projectDir);
@@ -24,6 +29,9 @@ export function analyze(projectDir) {
   result.errors.push(...lib.errors);
   result.warnings.push(...lib.warnings);
   result.story.scene = sceneRuntime(config, result.errors);
+  if (config.style && !fs.existsSync(path.join(RUNTIME, 'themes', config.style))) {
+    result.errors.push({ file: 'darkroom.json', line: 0, passage: '', msg: `style "${config.style}" does not exist (available: ${availableStyles().join(', ') || 'none'})` });
+  }
   if (!files.length) result.errors.unshift({ file: 'story/', line: 0, passage: '', msg: 'no .twee, .tw or Twine .html files found in story/' });
 
   // Title screen media from darkroom.json
@@ -153,6 +161,15 @@ export function writeWebFiles(outDir, { config, story, dev = false, assetsMeta =
   fs.copyFileSync(path.join(RUNTIME, 'darkroom.css'), path.join(outDir, 'darkroom.css'));
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const userCss = [themeCss(config.theme), ...story.css].filter(Boolean).join('\n\n');
+  // A built-in style (runtime/themes/<name>/): its CSS, plus bundled fonts if it has them.
+  let styleLinks = '';
+  const styleDir = config.style && path.join(RUNTIME, 'themes', config.style);
+  if (styleDir && fs.existsSync(styleDir)) {
+    fs.cpSync(styleDir, path.join(outDir, 'themes', config.style), { recursive: true });
+    for (const f of ['fonts.css', `${config.style}.css`]) {
+      if (fs.existsSync(path.join(styleDir, f))) styleLinks += `<link rel="stylesheet" href="themes/${config.style}/${f}">\n`;
+    }
+  }
   const userJs = story.js.join('\n\n');
   const html = `<!doctype html>
 <html lang="${esc(config.lang || 'en')}">
@@ -163,7 +180,7 @@ export function writeWebFiles(outDir, { config, story, dev = false, assetsMeta =
 <meta name="theme-color" content="#000000">
 <title>${esc(config.title)}</title>
 <link rel="stylesheet" href="darkroom.css">
-${userCss ? `<style>\n${userCss}\n</style>\n` : ''}</head>
+${styleLinks}${userCss ? `<style>\n${userCss}\n</style>\n` : ''}</head>
 <body>
 <div id="dr"></div>
 <noscript>This story needs JavaScript.</noscript>

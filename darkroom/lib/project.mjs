@@ -33,6 +33,7 @@ export const DEFAULTS = {
   title: 'Untitled',
   author: '',
   start: null,
+  style: null, // a built-in style from runtime/themes, e.g. "vigil"
   mode: 'vn', // "vn" = text box over the picture, click to advance; "page" = Twine-style scrolling page
   beat: 'line', // "line" = every line is a click; "paragraph" = lines are grouped until a blank line
   typewriter: 40, // characters per second, 0 = instant

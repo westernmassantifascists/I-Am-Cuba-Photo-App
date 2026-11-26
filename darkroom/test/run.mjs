@@ -242,6 +242,11 @@ if (playwright) {
       await choose(page, 'Go to the edge');
       assert.equal(await passage(page), 'The Grand Hotel'); // dread 25 now beats tenderness 10
       assert.equal(await page.evaluate(() => window.Darkroom.media.bg.id), 'hotel'); // the only facade picture
+      // style "vigil": bundled fonts, atmosphere-night layer, overlay-ash particles
+      assert.ok(await page.evaluate(async () => (await document.fonts.ready, document.fonts.check('1em "EB Garamond"') && [...document.fonts].some((f) => f.family.includes('EB Garamond') && f.status === 'loaded'))));
+      assert.equal(await page.evaluate(() => document.querySelector('#dr').dataset.atmosphere), 'night');
+      assert.equal(await page.evaluate(() => document.querySelector('#dr').dataset.overlay), 'ash');
+      assert.ok(await page.$('.dr-particles.on'));
       await shot(page, '3-hotel');
       await choose(page, 'Look up at the third floor'); // dread 50: not yet over the line
       const s1 = await state(page);

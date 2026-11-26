@@ -131,6 +131,8 @@
     <div class="dr-stage">
       <div class="dr-bg"></div>
       <div class="dr-images"></div>
+      <div class="dr-atmos"></div>
+      <canvas class="dr-particles" aria-hidden="true"></canvas>
       <div class="dr-fx"></div>
       <div class="dr-page"><div class="dr-page-inner"></div></div>
       <div class="dr-choices" role="group"></div>
@@ -139,7 +141,7 @@
         <div class="dr-body"></div>
         <div class="dr-next" aria-hidden="true">▾</div>
       </div>
-      <div class="dr-card"><div class="dr-card-title"></div><div class="dr-card-sub"></div></div>
+      <div class="dr-card"><div class="dr-card-kicker"></div><div class="dr-card-title"></div><div class="dr-card-sub"></div></div>
       <div class="dr-video"></div>
       <nav class="dr-bar">
         <button data-act="back" title="Back (←)">Back</button>
@@ -167,6 +169,8 @@
   const bgEl = $('.dr-bg', root);
   const imagesEl = $('.dr-images', root);
   const fxEl = $('.dr-fx', root);
+  const atmosEl = $('.dr-atmos', root);
+  const particleCanvas = $('.dr-particles', root);
   const pageEl = $('.dr-page-inner', root);
   const pageScroll = $('.dr-page', root);
   const choicesEl = $('.dr-choices', root);
@@ -326,6 +330,88 @@
     }
   }
 
+  // ---------------------------------------------------------------- atmosphere & particles
+  // atmosphere-fog etc. fade a styled layer (styles: your stylesheet or a built-in style such as "vigil");
+  // overlay-ash / dust / snow / rain / embers draw drifting particles over the picture.
+  let atmosTimer;
+  function setAtmosphere(name) {
+    name = name && name !== 'none' ? name : '';
+    root.dataset.atmosphere = name;
+    if ((atmosEl.dataset.atmosphere || '') === name) return;
+    atmosEl.classList.remove('on');
+    clearTimeout(atmosTimer);
+    atmosTimer = setTimeout(() => {
+      atmosEl.dataset.atmosphere = name;
+      if (name) requestAnimationFrame(() => atmosEl.classList.add('on'));
+    }, atmosEl.dataset.atmosphere ? 700 : 0);
+  }
+
+  const PARTICLES = {
+    ash: { n: 70, color: '200,196,190', size: [0.8, 2.4], vx: [-12, 12], vy: [10, 28], alpha: [0.2, 0.6], sway: 14 },
+    dust: { n: 55, color: '230,210,170', size: [0.6, 1.6], vx: [-6, 6], vy: [-5, 5], alpha: [0.1, 0.4], sway: 8 },
+    snow: { n: 90, color: '255,255,255', size: [1.2, 3.2], vx: [-10, 10], vy: [25, 60], alpha: [0.4, 0.85], sway: 20 },
+    rain: { n: 120, color: '200,210,225', size: [0.6, 1.2], vx: [-80, -40], vy: [650, 950], alpha: [0.15, 0.35], streak: true },
+    embers: { n: 40, color: '255,150,60', size: [0.8, 2], vx: [-10, 10], vy: [-45, -15], alpha: [0.3, 0.8], sway: 12 },
+  };
+  const P_REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let particles = null;
+  function setOverlay(name) {
+    name = name && name !== 'none' ? name : '';
+    root.dataset.overlay = name;
+    const spec = PARTICLES[name];
+    if (particles && particles.name === name) return;
+    if (particles) cancelAnimationFrame(particles.raf);
+    particles = null;
+    const ctx2 = particleCanvas.getContext && particleCanvas.getContext('2d');
+    if (!ctx2) return;
+    ctx2.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+    particleCanvas.classList.toggle('on', !!spec);
+    if (!spec || P_REDUCED) return;
+    const rnd = (a) => a[0] + Math.random() * (a[1] - a[0]);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const fit = () => {
+      particleCanvas.width = stage.clientWidth * dpr;
+      particleCanvas.height = stage.clientHeight * dpr;
+    };
+    fit();
+    const W = () => particleCanvas.width / dpr;
+    const Hh = () => particleCanvas.height / dpr;
+    const make = (anywhere) => ({
+      x: Math.random() * W(), y: anywhere ? Math.random() * Hh() : spec.vy[0] < 0 ? Hh() + 5 : -5,
+      vx: rnd(spec.vx), vy: rnd(spec.vy), r: rnd(spec.size), a: rnd(spec.alpha), ph: Math.random() * 6.28,
+    });
+    const list = Array.from({ length: spec.n }, () => make(true));
+    let last = performance.now();
+    const step = (now) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      if (particleCanvas.width !== stage.clientWidth * dpr) fit();
+      ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx2.clearRect(0, 0, W(), Hh());
+      for (const q of list) {
+        q.ph += dt;
+        q.x += (q.vx + (spec.sway ? Math.sin(q.ph) * spec.sway : 0)) * dt;
+        q.y += q.vy * dt;
+        if (q.y > Hh() + 10 || q.y < -10 || q.x < -20 || q.x > W() + 20) Object.assign(q, make(false));
+        if (spec.streak) {
+          ctx2.strokeStyle = `rgba(${spec.color},${q.a})`;
+          ctx2.lineWidth = q.r;
+          ctx2.beginPath();
+          ctx2.moveTo(q.x, q.y);
+          ctx2.lineTo(q.x - q.vx * 0.025, q.y - q.vy * 0.025);
+          ctx2.stroke();
+        } else {
+          ctx2.fillStyle = `rgba(${spec.color},${q.a})`;
+          ctx2.beginPath();
+          ctx2.arc(q.x, q.y, q.r, 0, 6.283);
+          ctx2.fill();
+        }
+      }
+      particles.raf = requestAnimationFrame(step);
+    };
+    particles = { name, raf: requestAnimationFrame(step) };
+  }
+
   // ---------------------------------------------------------------- looks & the media library
   function lookStyle(name) {
     const L = (SC.looks && (SC.looks[name] || SC.looks.neutral)) || { opacity: 1, filter: '' };
@@ -419,8 +505,8 @@
     if (a) showLibrary(a, { look });
     else setLook(look);
     root.dataset.look = look;
-    root.dataset.atmosphere = sc.atmosphere || '';
-    root.dataset.overlay = sc.overlay || '';
+    setAtmosphere(sc.atmosphere);
+    setOverlay(sc.overlay);
   }
   // Volumes that follow the meters (darkroom.json scene.mix), re-applied on every passage.
   function remix() {
@@ -783,6 +869,12 @@
       case 'look':
         setLook(op.look);
         return;
+      case 'atmosphere':
+        setAtmosphere(op.name);
+        return;
+      case 'overlay':
+        setOverlay(op.name);
+        return;
       case 'nudge':
         nudge(op.changes);
         return;
@@ -889,6 +981,7 @@
   }
 
   async function showCard(op, id) {
+    $('.dr-card-kicker', cardEl).textContent = op.kicker || '';
     $('.dr-card-title', cardEl).textContent = op.title;
     $('.dr-card-sub', cardEl).textContent = op.sub || '';
     cardEl.classList.add('on');
@@ -1187,6 +1280,8 @@
     G.resumeTo = null;
     G.media = { bg: null, images: {}, music: null, ambience: null, textbox: true };
     applyMedia(G.media);
+    setAtmosphere('');
+    setOverlay('');
     const id = ++runId;
     run(STORY.init || [], id, []).then(() => enter(STORY.start));
   }

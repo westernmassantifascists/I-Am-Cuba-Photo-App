@@ -578,7 +578,10 @@ function compileBody(text, ctx) {
         return cur().push({ t: 'ending', id, title: pos.slice(1).join(' ') || kv.title || id });
       }
       case 'card':
-        return cur().push({ t: 'card', title: pos[0] || '', sub: pos[1] || kv.sub || '', s: num(kv.time, 0) });
+        return cur().push({ t: 'card', title: pos[0] || '', sub: pos[1] || kv.sub || '', kicker: kv.kicker || '', s: num(kv.time, 0) });
+      case 'atmosphere':
+      case 'overlay':
+        return cur().push({ t: name, name: pos[0] || 'none' });
       case 'clear':
         return cur().push({ t: 'clear' });
       case 'textbox':

@@ -139,7 +139,8 @@ Tags on a passage describe its scene. None of them names a file.
 | `look-mourning` | how the picture is shown (see Looks). Without it, the feelings decide. |
 | `music-mourning` | music for the mood *mourning* (mapped to a track in `darkroom.json`); `music-silence` stops it |
 | `sound-water` | ambient sound for *water*; `sound-silence` stops it |
-| `atmosphere-fog`, `overlay-rain` | set `data-atmosphere` / `data-overlay` on the page, for your own CSS effects |
+| `atmosphere-fog` | a tinted layer over the picture (see Styles); fades between atmospheres |
+| `overlay-ash` | drifting particles over the picture: `ash`, `dust`, `snow`, `rain`, `embers` |
 | `drift-town` | this passage belongs to the drifting pool *town* |
 | `feel-dread` | this passage suits dread (used to choose drifting scenes) |
 
@@ -252,6 +253,24 @@ You catch the last bus out.
 Endings are remembered across playthroughs and listed under Endings. `runs()` is the number of
 finished playthroughs, e.g. to change the opening on a second visit.
 
+## Styles
+
+`"style": "vigil"` in `darkroom.json` turns on **Vigil**, the look carried over from The Dead City:
+EB Garamond and Cormorant Garamond (bundled, so nothing loads from a font server), warm parchment text on
+near-black with amber links, the translucent passage card with choices as underlined links, a vignette,
+slow fade-ins, intertitle-style chapter cards and an opening-credits title screen. New projects use it.
+
+It also styles the atmospheres: `fog`, `water`, `night`, `deep-night`, `bells`, `church`, `memory`, `figure`,
+`candle`, `dusk` and `dawn`. Add your own in a `[stylesheet]` passage:
+
+```css
+#dr .dr-atmos[data-atmosphere="frost"] { background: linear-gradient(180deg, rgba(200, 220, 255, 0.12), rgba(0, 0, 0, 0.2)); }
+```
+
+Without `style`, Darkroom uses its plain default look. Either way, `theme` in `darkroom.json` overrides
+any colour or font variable (`"theme": { "accent": "#c33", "text-size": "1.3rem" }`), and Vigil adds the
+classes `chapter-heading`, `ending-title`, `narration` and `stat-bar` for use in your passages' HTML.
+
 ## Directives
 
 Lines starting with `@`. Options are `key=value`, times are in seconds.
@@ -260,6 +279,7 @@ Lines starting with `@`. Options are `key=value`, times are in seconds.
 | --- | --- |
 | `@motif canal` | show a picture for this motif now (`look=quiet`, `fade=2`) |
 | `@look mourning` | change the look of the current picture |
+| `@atmosphere candle` / `@overlay snow` | change atmosphere or particles mid-passage (`none` clears) |
 | `@nudge dread+10 longing-5` | change feelings |
 | `@turn $dread >= 55` | make this passage a threshold turn (`once=false` to allow repeats) |
 | `@when $longing > 25` | a drifting scene is only chosen while this holds |
@@ -274,7 +294,7 @@ Lines starting with `@`. Options are `key=value`, times are in seconds.
 | `@stop` | stop music and ambience (`@stop music`, `fade=4`) |
 | `@video tide` | full-screen cut-scene; tap skips (`skip=false` to force watching); music dips meanwhile |
 | `@wait 1.5` | pause |
-| `@card "Chapter Two" "The river"` | full-screen title card |
+| `@card "The River" kicker="Chapter Two"` | full-screen chapter card (an optional second quoted text is a subtitle) |
 | `@fx flash` / `shake` / `fadeout` / `fadein` | screen effects (`color=#600`, `time=2`) |
 | `@textbox hide` | hide the text box for a picture-only moment |
 | `@set $x = 1` / `@unset $x` | change variables |
@@ -333,6 +353,7 @@ browser** → viewport e.g. **1280 × 720** → tick **Mobile friendly** and **F
 {
   "title": "Low Tide",
   "id": "low-tide",              // file names and save slots; don't change after release
+  "style": "vigil",              // built-in style (leave out for the plain default)
   "author": "",
   "start": "Arrival",
   "mode": "page",                // "page" (text over the photo, like Twine) or "vn" (text box)

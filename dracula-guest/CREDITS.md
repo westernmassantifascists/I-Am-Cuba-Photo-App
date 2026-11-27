@@ -50,3 +50,11 @@ Music: composed for this game on the Darkroom groovebox (darkroom/lib/groovebox.
 ## Film (public domain)
 
 - (not downloaded)
+
+## People
+
+- **The Countess** — Microsoft Rocketbox avatar library, `Female_Adult_08` (https://github.com/microsoft/Microsoft-Rocketbox), MIT License, © 2020 Microsoft. Eyes closed at import; laid on the bier in `godot/scripts/main.gd`.
+
+## Orchestra
+
+- **VSCO 2 Community Edition** — Versilian Studios (https://github.com/sgossner/VSCO-2-CE), CC0 1.0. String sections, horns, trombones, tuba, timpani, bass drum, harp; church organ sampled by Simon Dalzell (Ivy Audio). Fetched by `tools/fetch-samples.mjs`, played by the Darkroom groovebox sampler.

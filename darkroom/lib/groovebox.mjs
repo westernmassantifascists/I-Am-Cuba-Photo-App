@@ -70,10 +70,184 @@ function adsr(t, dur, a, d, s, r) {
   return Math.max(0, v);
 }
 
+
+// ---------- sampler: recorded instruments ----------
+// inst: { type: 'sampler', dir: 'path/to/wavs' (or [paths]), match: 'regex on the file name',
+//         oneshot: false, attack, release, loop: true }
+// Pitches: the note class is read from the file name where it has one; the octave (or the whole
+// pitch, for names without one) is measured from the recording, because sample libraries number
+// octaves differently. Velocity layers come from "_v<n>" in the name; round robins are alternated.
+const sampleCache = new Map();
+function decodeMono(file) {
+  if (sampleCache.has(file)) return sampleCache.get(file);
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-i', file, '-ac', '1', '-ar', String(SR), '-f', 'f32le', '-'], { maxBuffer: 1 << 30 });
+  if (r.status !== 0) throw new Error(`could not decode ${file}`);
+  const buf = new Float32Array(r.stdout.buffer.slice(r.stdout.byteOffset, r.stdout.byteOffset + r.stdout.length));
+  sampleCache.set(file, buf);
+  return buf;
+}
+function measurePitch(x) {
+  // normalised autocorrelation (a small YIN) on a steady stretch of the sound
+  const start = Math.min(Math.floor(0.25 * SR), Math.floor(x.length / 4));
+  const n = Math.min(Math.floor(0.5 * SR), x.length - start - Math.floor(SR / 25) - 1);
+  if (n < 2000) return null;
+  const minLag = Math.floor(SR / 1500);
+  const maxLag = Math.floor(SR / 25);
+  const d = new Float32Array(maxLag + 1);
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let sum = 0;
+    for (let i = 0; i < n; i += 2) {
+      const v = x[start + i] - x[start + i + lag];
+      sum += v * v;
+    }
+    d[lag] = sum;
+  }
+  let run = 0;
+  let best = -1;
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    run += d[lag];
+    const cm = (d[lag] * (lag - minLag + 1)) / (run || 1);
+    if (cm < 0.15) {
+      while (lag + 1 <= maxLag && d[lag + 1] < d[lag]) lag++;
+      best = lag;
+      break;
+    }
+  }
+  if (best < 0) {
+    let m = Infinity;
+    for (let lag = minLag; lag <= maxLag; lag++) if (d[lag] < m) { m = d[lag]; best = lag; }
+  }
+  return SR / best;
+}
+const indexCache = new Map();
+function sampleIndex(inst, base) {
+  const key = JSON.stringify([inst.dir, inst.match, base]);
+  if (indexCache.has(key)) return indexCache.get(key);
+  const dirs = (Array.isArray(inst.dir) ? inst.dir : [inst.dir]).map((d) => path.resolve(base, d));
+  const re = inst.match ? new RegExp(inst.match) : null;
+  const cacheFile = path.join(dirs[0], '.groovebox-pitches.json');
+  let known = {};
+  try { known = JSON.parse(fs.readFileSync(cacheFile, 'utf8')); } catch {}
+  const list = [];
+  const nameRe = /(?:^|[_\- ])([A-Ga-g])([#b]?)(-?\d)(?=[_\- ]|$)/;
+  for (const dir of dirs) {
+    for (const f of fs.readdirSync(dir).sort()) {
+      if (!/\.(wav|flac|ogg)$/i.test(f) || (re && !re.test(f))) continue;
+      const file = path.join(dir, f);
+      const stem = f.replace(/\.\w+$/, '');
+      const v = f.match(/_v(\d+)/i);
+      const item = { file, midi: null, vel: v ? +v[1] : 1 };
+      if (inst.pitch) item.midi = 69 + 12 * Math.log2(noteFreq(inst.pitch) / 440);
+      else if (inst.number != null) {
+        // libraries that number their samples by key: midi = number + offset
+        const nums = stem.replace(/_rr\d+$/i, '').match(/(\d+)(?!.*\d)/);
+        item.midi = nums ? +nums[1] + inst.number : 48;
+      } else {
+        const m = stem.match(nameRe);
+        if (m) item.named = NOTE[m[1].toUpperCase()] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + (parseInt(m[3], 10) + 1) * 12;
+        if (known[file] == null) {
+          const hz = measurePitch(decodeMono(file));
+          known[file] = hz ? 69 + 12 * Math.log2(hz / 440) : null;
+        }
+        item.measured = known[file];
+      }
+      list.push(item);
+    }
+  }
+  // named samples: libraries number octaves differently; one octave correction for the whole set,
+  // decided by what most of the recordings actually sound like
+  const votes = {};
+  for (const it of list) if (it.named != null && it.measured != null) {
+    const k = Math.round((it.measured - it.named) / 12);
+    votes[k] = (votes[k] || 0) + 1;
+  }
+  const shift = +(Object.entries(votes).sort((x, y) => y[1] - x[1])[0]?.[0] ?? 0);
+  for (const it of list) {
+    if (it.midi != null) continue;
+    it.midi = it.named != null ? it.named + 12 * shift : Math.round(it.measured ?? 48);
+  }
+  if (!list.length) throw new Error(`sampler: no samples in ${dirs.join(', ')}`);
+  const vels = [...new Set(list.map((s) => s.vel))].sort((a, b) => a - b);
+  // calibrate: each dynamic layer's typical note is set to one reference level, so every
+  // instrument's gain means the same thing; the layers then differ in colour (a soft bow, a hard
+  // one) while the score sets the loudness
+  const rmsOf = (file) => {
+    if (known['rms:' + file] != null) return known['rms:' + file];
+    const x = decodeMono(file);
+    const a0 = Math.floor(0.02 * SR);
+    const a1 = Math.min(x.length, a0 + Math.floor((inst.oneshot ? 0.4 : 1.5) * SR));
+    let sum = 0;
+    for (let i = a0; i < a1; i++) sum += x[i] * x[i];
+    return (known['rms:' + file] = Math.sqrt(sum / Math.max(1, a1 - a0)));
+  };
+  const calib = {};
+  for (const v of vels) {
+    const lv = list.filter((s) => s.vel === v).map((s) => rmsOf(s.file)).sort((x, y) => x - y);
+    calib[v] = inst.calibrate === false ? 1 : 0.12 / (lv[Math.floor(lv.length / 2)] || 1);
+  }
+  const idx = { list, vels, rr: 0, calib };
+  try { fs.writeFileSync(cacheFile, JSON.stringify(known)); } catch {}
+  indexCache.set(key, idx);
+  return idx;
+}
+let scoreBase = '.';
+function renderSample(inst, freq, dur, vel) {
+  const idx = sampleIndex(inst, scoreBase);
+  const target = 69 + 12 * Math.log2(freq / 440);
+  const layer = idx.vels[Math.max(0, Math.min(idx.vels.length - 1, Math.round(Math.min(1, vel) * (idx.vels.length - 1) + (inst.velShift ?? 0))))];
+  let pool = idx.list.filter((s) => s.vel === layer);
+  let bestD = Infinity;
+  for (const s of pool) bestD = Math.min(bestD, Math.abs(s.midi - target));
+  pool = pool.filter((s) => Math.abs(s.midi - target) === bestD);
+  const pick = pool[idx.rr++ % pool.length];
+  const src = decodeMono(pick.file);
+  const ratio = 2 ** ((target - pick.midi) / 12);
+  const g = (inst.gain ?? 0.5) * idx.calib[layer] * (inst.velGain === false ? 1 : 0.4 + 0.6 * Math.min(1, vel));
+  const rel = inst.release ?? 0.6;
+  const a = inst.attack ?? 0.004;
+  const oneshot = inst.oneshot ?? false;
+  // a long note on a short recording: loop the steady middle, cross-fading each pass
+  const needSrc = Math.ceil(((oneshot ? src.length / SR : dur + rel) * ratio + 0.1) * SR);
+  let body = src;
+  if (!oneshot && needSrc > src.length && inst.loop !== false) {
+    const lb = Math.floor(src.length * 0.35);
+    const le = Math.floor(src.length * 0.85);
+    const xf = Math.min(Math.floor(0.35 * SR), Math.floor((le - lb) / 3));
+    body = new Float32Array(needSrc + xf);
+    body.set(src.subarray(0, le));
+    let w = le;
+    while (w < body.length) {
+      // the tail of the previous pass fades out while the loop start fades in
+      for (let k = 0; k < xf && w - xf + k < body.length; k++) {
+        const t = k / xf;
+        body[w - xf + k] = body[w - xf + k] * Math.cos((t * Math.PI) / 2) + src[lb + k] * Math.sin((t * Math.PI) / 2);
+      }
+      const take = Math.min(le - lb - xf, body.length - w);
+      if (take <= 0) break;
+      body.set(src.subarray(lb + xf, lb + xf + take), w);
+      w += take;
+    }
+  }
+  const outLen = oneshot ? Math.floor(body.length / ratio) : Math.ceil((dur + rel) * SR);
+  const out = new Float32Array(Math.max(1, outLen));
+  for (let i = 0; i < out.length; i++) {
+    const p = i * ratio;
+    const j = Math.floor(p);
+    if (j + 1 >= body.length) break;
+    const x = body[j] + (body[j + 1] - body[j]) * (p - j);
+    const t = i / SR;
+    let env = a > 0 ? Math.min(1, t / a) : 1;
+    if (!oneshot && t > dur) env *= Math.exp(-(t - dur) / (rel / 3));
+    out[i] = x * env * g;
+  }
+  return out;
+}
+
 // ---------- instruments: render one note into a mono buffer ----------
 // Each returns a Float32Array of samples starting at note-on.
 function renderNote(inst, freq, dur, vel) {
   const type = inst.type || 'poly';
+  if (type === 'sampler') return renderSample(inst, freq, dur, vel);
   const tail = inst.release ?? (type === 'poly' ? 1 : 0.3);
   const len = Math.ceil((dur + tail + 0.05) * SR);
   const out = new Float32Array(len);
@@ -346,6 +520,7 @@ function parsePattern(str) {
 }
 
 export function renderStem(score, stemName) {
+  scoreBase = score.base || '.';
   const stem = score.stems[stemName];
   if (!stem) throw new Error(`no stem "${stemName}"`);
   const bpm = stem.bpm ?? score.bpm ?? 72;
@@ -449,6 +624,7 @@ export function writeWav(file, L, R) {
 // Render every stem of a score into outDir as .ogg (or .wav/.mp3/.m4a by `format`).
 export function renderScore(scoreFile, outDir, { format = 'ogg', only = null, onStem = () => {} } = {}) {
   const score = JSON.parse(fs.readFileSync(scoreFile, 'utf8'));
+  score.base = path.dirname(path.resolve(scoreFile));
   fs.mkdirSync(outDir, { recursive: true });
   const results = [];
   for (const name of Object.keys(score.stems)) {
@@ -470,3 +646,5 @@ export function renderScore(scoreFile, outDir, { format = 'ogg', only = null, on
   }
   return results;
 }
+
+export { sampleIndex as _sampleIndex };

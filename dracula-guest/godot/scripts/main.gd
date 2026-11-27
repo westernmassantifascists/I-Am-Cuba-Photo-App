@@ -554,8 +554,9 @@ func _road_nearest(p: Vector2) -> Vector2:
 	return at
 
 
-## A walker can wander off the road, but not out of the valley: past ROAM metres the hills turn
-## them back; and anyone who somehow falls through the world is set down on the road again.
+## A walker can wander off the road, but not off the land: the world ends in open sky (the
+## photographed horizon), and an invisible boundary turns them back ROAM metres from the road and
+## well before the edge; anyone who somehow falls through the world is set down on the road again.
 func _keep_on_land() -> void:
 	if player == null or not player.enabled:
 		return
@@ -614,9 +615,6 @@ func height_at(x: float, z: float) -> float:
 	var hills := noise.get_noise_2d(x, z) * lerpf(3.0, 9.0, valley) * smoothstep(4.0, 24.0, d)
 	var swell := noise.get_noise_2d(x * 0.25 + 400.0, z * 0.25) * 10.0 * smoothstep(20.0, 60.0, d)
 	var h := info.y + minf(side, 60.0) + hills + swell
-	# the world ends in mountains, never in sky: the land climbs steeply towards the map's edges
-	var edge := minf(minf(x - MAP_X0, MAP_X1 - x), minf(z - MAP_Z0, MAP_Z1 - z))
-	h += pow(1.0 - smoothstep(0.0, 45.0, edge), 1.6) * 70.0
 	# flat places: the village green, the churchyard
 	for flat in [[ROUTE[8][1], 28.0, ROUTE[8][2]], [ROUTE[11][1], 32.0, ROUTE[11][2]]]:
 		var f := 1.0 - smoothstep(flat[1] * 0.6, flat[1], p.distance_to(flat[0]))
@@ -775,6 +773,26 @@ func _place(id: String, pos: Vector3, scale := 1.0, rot := 0.0, tilt := 0.0) -> 
 	return n
 
 
+## Sets each piece of a placed scan down on the ground under it: a rock set spread over several
+## metres has every rock bedded into the slope, never one hanging in the air. bury: how much of
+## each piece's height goes under the surface.
+func _settle(n: Node3D, bury := 0.0) -> void:
+	if n == null:
+		return
+	for mi in n.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var bb: AABB = m.global_transform * m.get_aabb()
+		if bb.size.length() < 0.001:
+			continue
+		var lowest := INF
+		for corner in [Vector2(0, 0), Vector2(1, 0), Vector2(0, 1), Vector2(1, 1), Vector2(0.5, 0.5)]:
+			var x: float = bb.position.x + bb.size.x * corner.x
+			var z: float = bb.position.z + bb.size.z * corner.y
+			lowest = minf(lowest, height_at(x, z))
+		var drop := lowest - bb.position.y - clampf(bury, 0.0, 1.0) * bb.size.y
+		m.global_position.y += drop
+
+
 func _fit_height(n: Node3D, h: float) -> void:
 	var aabb := _aabb(n)
 	if aabb.size.y > 0.01:
@@ -909,9 +927,9 @@ func _build_crossroads() -> void:
 	add_child(cross)
 	_block(Vector3(0.16, 2.4, 0.14), Vector3(0, 1.1, 0), planks, 0.0, true, cross)
 	_block(Vector3(1.05, 0.14, 0.13), Vector3(0, 1.72, 0), planks, 0.0, false, cross)
-	_place("stone_01", g + Vector3(0.6, 0, 0.4), 2.0, 1.0)
-	_place("stone_01", g + Vector3(-0.5, 0, -0.3), 1.4, 2.2)
-	_place("dry_branches_medium_01", _ground(p.x - 4, p.y - 6), 1.0, 0.7)
+	_settle(_place("stone_01", g + Vector3(0.6, 0, 0.4), 2.0, 1.0), 0.2)
+	_settle(_place("stone_01", g + Vector3(-0.5, 0, -0.3), 1.4, 2.2), 0.2)
+	_settle(_place("dry_branches_medium_01", _ground(p.x - 4, p.y - 6), 1.0, 0.7))
 	# the crest where the tall, thin stranger stands: the highest ground in sight to the west
 	var best := _ground(-34, 190)
 	for i in 24:
@@ -953,21 +971,21 @@ func _scatter(id: String, count: int, dmin: float, dmax: float, smin: float, sma
 		# keep the churchyard and the village green clear
 		if Vector2(x, z).distance_to(ROUTE[11][1]) < 26.0 or Vector2(x, z).distance_to(ROUTE[8][1]) < 22.0:
 			continue
-		_place(id, _ground(x, z) - Vector3(0, sink, 0), rng.randf_range(smin, smax), rng.randf_range(0, TAU))
+		_settle(_place(id, _ground(x, z), rng.randf_range(smin, smax), rng.randf_range(0, TAU)), sink)
 		placed += 1
 
 
 func _scatter_nature() -> void:
-	_scatter("rock_moss_set_01", 14, 5, 40, 1.0, 2.2, -260, 220, 0.2)
-	_scatter("rock_moss_set_02", 14, 5, 40, 1.0, 2.2, -260, 220, 0.2)
-	_scatter("boulder_01", 10, 9, 70, 1.2, 2.6, -260, 230, 0.6)
-	_scatter("rock_07", 8, 8, 60, 1.5, 3.0, -260, 230, 0.4)
-	_scatter("rock_09", 8, 8, 60, 1.5, 3.0, -260, 230, 0.4)
+	_scatter("rock_moss_set_01", 14, 5, 40, 1.0, 2.2, -260, 220, 0.15)
+	_scatter("rock_moss_set_02", 14, 5, 40, 1.0, 2.2, -260, 220, 0.15)
+	_scatter("boulder_01", 10, 9, 70, 1.2, 2.6, -260, 230, 0.25)
+	_scatter("rock_07", 8, 8, 60, 1.5, 3.0, -260, 230, 0.2)
+	_scatter("rock_09", 8, 8, 60, 1.5, 3.0, -260, 230, 0.2)
 	_scatter("stone_01", 18, 4, 25, 1.0, 3.0, -260, 230)
-	_scatter("tree_stump_01", 8, 6, 35, 1.0, 1.4, -200, 120)
-	_scatter("tree_stump_02", 8, 6, 35, 1.0, 1.4, -200, 120)
-	_scatter("dead_tree_trunk", 7, 6, 40, 1.0, 1.3, -230, 160)
-	_scatter("dead_tree_trunk_02", 7, 6, 40, 1.0, 1.3, -230, 160)
+	_scatter("tree_stump_01", 8, 6, 35, 1.0, 1.4, -200, 120, 0.12)
+	_scatter("tree_stump_02", 8, 6, 35, 1.0, 1.4, -200, 120, 0.12)
+	_scatter("dead_tree_trunk", 7, 6, 40, 1.0, 1.3, -230, 160, 0.15)
+	_scatter("dead_tree_trunk_02", 7, 6, 40, 1.0, 1.3, -230, 160, 0.15)
 	_scatter("dry_branches_medium_01", 20, 3, 18, 0.8, 1.3, -260, 220)
 	_scatter("fern_02", 20, 4, 20, 1.0, 1.6, -200, 120)
 	_scatter("moss_01", 8, 4, 16, 1.0, 1.5, -200, 120)
@@ -1180,16 +1198,31 @@ func _build_tomb(center: Vector3, face: Vector2, marble: Material, blocks: Mater
 		door_right = door.find_child("large_castle_door_right", true, false) as Node3D
 	# inside: the bier and the one who lies on it
 	_block(Vector3(2.3, 0.7, 1.5), Vector3(0, 1.15, -1.2), marble, 0.0, true, tomb)
-	var shroud := MeshInstance3D.new()
-	shroud.mesh = _shroud_mesh(2.3, 1.5)
 	var linen := StandardMaterial3D.new()
 	linen.albedo_color = Color(0.86, 0.84, 0.8)
 	linen.roughness = 0.92
 	linen.cull_mode = BaseMaterial3D.CULL_DISABLED
-	linen.subsurf_scatter_enabled = false
+	var bier := Node3D.new()
+	bier.position = Vector3(0, 1.5, -1.2)
+	tomb.add_child(bier)
+	# the pillow
+	var pillow := MeshInstance3D.new()
+	var pm := SphereMesh.new()
+	pm.radius = 0.5
+	pm.height = 1.0
+	pillow.mesh = pm
+	pillow.scale = Vector3(0.3, 0.07, 0.44)
+	pillow.position = Vector3(-0.98, 0.025, 0)
+	pillow.material_override = linen
+	bier.add_child(pillow)
+	# the Countess: a real person's likeness (Microsoft Rocketbox, MIT), laid on her back with her
+	# head on the pillow and her eyes closed, the linen drawn up to her shoulders
+	var body_parts := _lay_countess(bier, Vector3(-0.84, 0.0, 0.0))
+	var shroud := MeshInstance3D.new()
+	shroud.mesh = _shroud_mesh(2.3, 1.5, body_parts)
 	shroud.material_override = linen
-	shroud.position = Vector3(0, 1.5, -1.2)
-	tomb.add_child(shroud)
+	shroud.visible = not OS.get_cmdline_user_args().has("--no-shroud")
+	bier.add_child(shroud)
 	var inner := OmniLight3D.new()
 	inner.position = Vector3(0.6, 3.6, 0.5)
 	inner.light_color = Color(0.75, 0.82, 1.0)
@@ -1256,12 +1289,108 @@ func _build_tomb(center: Vector3, face: Vector2, marble: Material, blocks: Mater
 	show_nodes["wolf"] = eyes
 
 
+## Lays the Countess on the bier (parent's origin = the top of the slab; she lies along x, head to
+## -x, face up). Returns the shape the sheet must cover, measured from her own skeleton.
+func _lay_countess(parent: Node3D, head_at: Vector3) -> Dictionary:
+	var path := "res://assets/people/countess/countess_facial.fbx"
+	if not ResourceLoader.exists(path):
+		return {}
+	var who: Node3D = (load(path) as PackedScene).instantiate()
+	var holder := Node3D.new()
+	parent.add_child(holder)
+	holder.add_child(who)
+	var skel := who.find_children("*", "Skeleton3D", true, false)[0] as Skeleton3D
+	var mesh := who.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
+	# her skin, eyes and hair: the library's photographed textures
+	var dir := "res://assets/people/countess/"
+	var skin := func(color: String, normal: String) -> StandardMaterial3D:
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = load(dir + color)
+		m.normal_enabled = true
+		m.normal_texture = load(dir + normal)
+		m.roughness = 0.62
+		return m
+	var hair := StandardMaterial3D.new()
+	hair.albedo_texture = load(dir + "opacity_color.png")
+	hair.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	hair.alpha_scissor_threshold = 0.4
+	hair.cull_mode = BaseMaterial3D.CULL_DISABLED
+	hair.roughness = 0.7
+	var face: StandardMaterial3D = skin.call("head_color.jpg", "head_normal.jpg")
+	for i in mesh.mesh.get_surface_count():
+		var n: String = mesh.mesh.surface_get_material(i).resource_name if mesh.mesh.surface_get_material(i) else ""
+		mesh.set_surface_override_material(i, hair if "opacity" in n else (face if "head" in n else skin.call("body_color.jpg", "body_normal.jpg")))
+	# (her eyes are closed at import: tools/countess_import.gd)
+	var bone := func(n: String) -> int: return skel.find_bone(n)
+	var at := func(n: String) -> Vector3: return skel.get_bone_global_pose(skel.find_bone(n)).origin
+	# bring her arms down from the modelling pose to lie along her sides: each arm bone is turned
+	# so that it points down her body, a little out from her hips
+	for side in ["L", "R"]:
+		for pair in [["UpperArm", "Forearm"], ["Forearm", "Hand"]]:
+			var b: int = bone.call("Bip01 %s %s" % [side, pair[0]])
+			var c: int = bone.call("Bip01 %s %s" % [side, pair[1]])
+			if b < 0 or c < 0:
+				continue
+			var g := skel.get_bone_global_pose(b)
+			var cur := (skel.get_bone_global_pose(c).origin - g.origin).normalized()
+			var out := signf(g.origin.x) * (0.16 if pair[0] == "UpperArm" else 0.05)
+			var want := Vector3(out, -1.0, 0.02).normalized()
+			var turn := Basis(Quaternion(cur, want))
+			var parent_g := skel.get_bone_global_pose(skel.get_bone_parent(b))
+			var local := parent_g.affine_inverse() * Transform3D(turn * g.basis, g.origin)
+			skel.set_bone_pose_rotation(b, local.basis.get_rotation_quaternion())
+			skel.force_update_all_bone_transforms()
+	# her own frame: up from feet to head, forward out of her face
+	var head: Vector3 = at.call("Bip01 Head")
+	var eyes: Vector3 = (at.call("Bip01 LEye") + at.call("Bip01 REye")) * 0.5
+	var feet: Vector3 = (at.call("Bip01 L Foot") + at.call("Bip01 R Foot")) * 0.5
+	var sk := skel.transform if skel.get_parent() == who else Transform3D.IDENTITY
+	var up := (sk.basis * (head - feet)).normalized()
+	var fwd := (sk.basis * (eyes - head))
+	fwd = (fwd - up * fwd.dot(up)).normalized()
+	var height := (sk.basis * (head - feet)).length()
+	if height > 10.0:
+		who.scale = Vector3.ONE * 0.01  # a library in centimetres
+	var m_from := Basis(up.cross(fwd), up, fwd)
+	var m_to := Basis(Vector3(-1, 0, 0).cross(Vector3(0, 1, 0)), Vector3(-1, 0, 0), Vector3(0, 1, 0))
+	holder.basis = m_to * m_from.inverse()
+	# head down on the pillow
+	var head_now := parent.to_local(skel.to_global(head))
+	holder.position += Vector3(head_at.x - head_now.x, 0, head_at.z - head_now.z)
+	# down onto the stone: the small of her back on the slab, her head on the pillow
+	var pelvis_now := parent.to_local(skel.to_global(at.call("Bip01 Pelvis")))
+	holder.position.y += 0.1 - pelvis_now.y
+	# what the sheet has to cover, in the bier's frame
+	var loc := func(n: String) -> Vector3: return parent.to_local(skel.to_global(at.call(n)))
+	var neck: Vector3 = loc.call("Bip01 Neck")
+	var chest: Vector3 = loc.call("Bip01 Spine2")
+	var pelvis: Vector3 = loc.call("Bip01 Pelvis")
+	var parts := []
+	parts.append([chest.x, 0.0, 0.24, 0.24, chest.y + 0.16])
+	parts.append([lerpf(neck.x, chest.x, 0.45), 0.0, 0.16, 0.25, chest.y + 0.11])
+	parts.append([pelvis.x, 0.0, 0.24, 0.24, pelvis.y + 0.13])
+	for side in ["L", "R"]:
+		var hip: Vector3 = loc.call("Bip01 %s Thigh" % side)
+		var knee: Vector3 = loc.call("Bip01 %s Calf" % side)
+		var foot: Vector3 = loc.call("Bip01 %s Foot" % side)
+		var toe: Vector3 = loc.call("Bip01 %s Toe0" % side) if skel.find_bone("Bip01 %s Toe0" % side) >= 0 else foot
+		var elbow: Vector3 = loc.call("Bip01 %s Forearm" % side)
+		var hand: Vector3 = loc.call("Bip01 %s Hand" % side)
+		parts.append([(hip.x + knee.x) * 0.5, (hip.z + knee.z) * 0.5, absf(knee.x - hip.x) * 0.6, 0.1, maxf(hip.y, knee.y) + 0.09])
+		parts.append([(knee.x + foot.x) * 0.5, (knee.z + foot.z) * 0.5, absf(foot.x - knee.x) * 0.6, 0.08, maxf(knee.y, foot.y) + 0.07])
+		parts.append([foot.x + 0.04, foot.z, 0.08, 0.07, maxf(foot.y, toe.y) + 0.14])
+		parts.append([(elbow.x + hand.x) * 0.5, (elbow.z + hand.z) * 0.5, absf(hand.x - elbow.x) * 0.7 + 0.1, 0.07, maxf(elbow.y, hand.y) + 0.06])
+	return {"parts": parts, "hem": lerpf(neck.x, chest.x, 0.12)}
+
+
 ## The one who lies on the bier, under a linen sheet: a body's shape (head on a pillow, shoulders,
 ## hands folded on the breast, hips, legs, the feet lifting the cloth), the sheet settling over it in
 ## folds and falling over the edges of the slab. Lying along x, head towards -x, on top of a slab
 ## of the given length and depth.
-func _shroud_mesh(length: float, depth: float) -> ArrayMesh:
-	var parts := [  # centre x, centre z, radius x, radius z, height
+func _shroud_mesh(length: float, depth: float, given: Dictionary = {}) -> ArrayMesh:
+	var parts: Array = given.get("parts", [])
+	var hem: float = given.get("hem", -INF)
+	if parts.is_empty(): parts = [  # centre x, centre z, radius x, radius z, height
 		[-0.93, 0.0, 0.2, 0.26, 0.07],    # pillow
 		[-0.9, 0.0, 0.12, 0.1, 0.25],     # head
 		[-0.66, 0.0, 0.1, 0.07, 0.15],    # neck
@@ -1280,7 +1409,8 @@ func _shroud_mesh(length: float, depth: float) -> ArrayMesh:
 	var hz := depth / 2.0
 	var over := 0.32
 	var step := 0.022
-	var nx := int((length + 2 * over) / step) + 1
+	var x_start := -hx - over if hem == -INF else hem
+	var nx := int((hx + over - x_start) / step) + 1
 	var nz := int((depth + 2 * over) / step) + 1
 	var cloth := FastNoiseLite.new()
 	cloth.seed = 1801
@@ -1290,7 +1420,7 @@ func _shroud_mesh(length: float, depth: float) -> ArrayMesh:
 	hgt.resize(nx * nz)
 	for j in nz:
 		for i in nx:
-			var x := -hx - over + i * step
+			var x := x_start + i * step
 			var z := -hz - over + j * step
 			var hmax := 0.0
 			for pt in parts:
@@ -1298,7 +1428,7 @@ func _shroud_mesh(length: float, depth: float) -> ArrayMesh:
 				var dz: float = (z - pt[1]) / pt[3]
 				var q := 1.0 - dx * dx - dz * dz
 				if q > 0.0:
-					hmax = maxf(hmax, pt[4] * 1.35 * sqrt(q))
+					hmax = maxf(hmax, pt[4] * 1.35 * sqrt(q) if hem == -INF else pt[4] * pow(q, 0.4))
 			hgt[j * nx + i] = hmax
 	# the sheet does not cling: let it settle across the hollows (a few passes of smoothing that
 	# only ever lift it)
@@ -1307,19 +1437,22 @@ func _shroud_mesh(length: float, depth: float) -> ArrayMesh:
 		for j in range(1, nz - 1):
 			for i in range(1, nx - 1):
 				var avg := (hgt[j * nx + i - 1] + hgt[j * nx + i + 1] + hgt[(j - 1) * nx + i] + hgt[(j + 1) * nx + i]) * 0.25
-				nh[j * nx + i] = lerpf(hgt[j * nx + i], avg, 0.6)
+				nh[j * nx + i] = lerpf(hgt[j * nx + i], avg, 0.6) if hem == -INF else maxf(hgt[j * nx + i], avg * 0.85)
 		hgt = nh
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for j in nz:
 		for i in nx:
-			var x := -hx - over + i * step
+			var x := x_start + i * step
 			var z := -hz - over + j * step
 			var cx := clampf(x, -hx - 0.01, hx + 0.01)
 			var cz := clampf(z, -hz - 0.01, hz + 0.01)
 			# past the edge of the slab the cloth falls straight down
 			var fall := maxf(absf(x) - hx, 0.0) + maxf(absf(z) - hz, 0.0)
 			var y := hgt[j * nx + i] + 0.012 - fall
+			if hem != -INF:
+				# the turned-down hem at her shoulders: the cloth is doubled and stands a little proud
+				y += 0.025 * (1.0 - smoothstep(0.0, 0.12, x - hem))
 			var folds := cloth.get_noise_2d(x * 0.6, z * 1.4) * 0.006 + cloth.get_noise_2d(x * 0.3 + 9.0, z * 3.0) * 0.006 * (1.0 + fall * 8.0)
 			var pos := Vector3(cx, y + folds, cz)
 			if fall > 0.0:

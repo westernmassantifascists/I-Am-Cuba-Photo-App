@@ -831,18 +831,11 @@ func _build_munich() -> void:
 	var tm := QuadMesh.new()
 	tm.size = Vector2(0.27, 0.19)
 	tq.mesh = tm
-	tq.material_override = paper
+	var form := StandardMaterial3D.new()
+	form.albedo_texture = _telegram_texture()
+	form.roughness = 0.95
+	tq.material_override = form
 	tel.add_child(tq)
-	var tt := Label3D.new()
-	tt.text = "Bistritz.\nBe careful of my guest — his safety is most\nprecious to me. Should aught happen to him, or if\nhe be missed, spare nothing to find him and ensure\nhis safety. He is English and therefore adventurous.\nThere is often danger from snow and wolves and night.\nLose not a moment if you suspect harm to him.\n\nDracula."
-	tt.font = display
-	tt.font_size = 40
-	tt.pixel_size = 0.00026
-	tt.modulate = Color(0.05, 0.04, 0.035)
-	tt.outline_size = 0
-	tt.shaded = true
-	tt.position = Vector3(0, 0, 0.002)
-	tq.add_child(tt)
 	show_nodes["telegram"] = tel
 
 
@@ -918,13 +911,77 @@ func _scatter_nature() -> void:
 	_scatter("tree_stump_02", 8, 6, 35, 1.0, 1.4, -200, 120)
 	_scatter("dead_tree_trunk", 7, 6, 40, 1.0, 1.3, -230, 160)
 	_scatter("dead_tree_trunk_02", 7, 6, 40, 1.0, 1.3, -230, 160)
-	_scatter("root_cluster_02", 5, 7, 30, 1.0, 1.5, -200, 60)
-	_scatter("pine_roots", 5, 7, 30, 1.0, 1.4, -200, 60)
 	_scatter("dry_branches_medium_01", 20, 3, 18, 0.8, 1.3, -260, 220)
 	_scatter("fern_02", 20, 4, 20, 1.0, 1.6, -200, 120)
 	_scatter("moss_01", 8, 4, 16, 1.0, 1.5, -200, 120)
 	# firs on the slopes: the "scattered fringe of wood" and the clumps on the hills
-	_scatter("fir_sapling", 26, 12, 90, 3.0, 5.5, -280, 160)
+	_scatter_trees()
+
+
+## Full-size conifers, baked from the fir scan by tools/bake_trees.gd and stood up as three crossed
+## cut-out cards: the valley's "scattered fringe of wood" and the clumps on the hills.
+var _tree_mats := {}
+var _tree_meshes := {}
+
+func _tree_card(kind: String, at: Vector3, size := 1.0) -> void:
+	var v := rng.randi_range(0, 2)
+	var key := "%s_%d" % [kind, v]
+	var path := "res://assets/trees/%s.png" % key
+	if not ResourceLoader.exists(path):
+		return
+	if not _tree_mats.has(key):
+		var tex: Texture2D = load(path)
+		var m := ShaderMaterial.new()
+		m.shader = load("res://scripts/tree_card.gdshader")
+		m.set_shader_parameter("tex", tex)
+		_tree_mats[key] = m
+		# the picture is the tree's height x (height / aspect), with the foot at the bottom
+		var aspect := float(tex.get_height()) / tex.get_width()
+		var heights := {"spruce": [11.5, 12.6, 13.0], "cypress": [11.7, 10.3, 11.2]}
+		var h: float = heights[kind][v] * 1.04
+		var am := ArrayMesh.new()
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for k in 3:
+			var ang := PI * k / 3.0
+			var r := Vector3(cos(ang), 0, sin(ang)) * (h / aspect) * 0.5
+			var nrm := Vector3(-sin(ang), 0, cos(ang))
+			var c := [Vector3.ZERO - r, Vector3.ZERO + r, Vector3(0, h, 0) + r, Vector3(0, h, 0) - r]
+			var uv := [Vector2(0, 1), Vector2(1, 1), Vector2(1, 0), Vector2(0, 0)]
+			for tri in [[0, 1, 2], [0, 2, 3]]:
+				for idx in tri:
+					st.set_normal(nrm)
+					st.set_uv(uv[idx])
+					st.add_vertex(c[idx] - Vector3(0, h * 0.02, 0))
+		st.commit(am)
+		_tree_meshes[key] = am
+	var mi := MeshInstance3D.new()
+	mi.mesh = _tree_meshes[key]
+	mi.material_override = _tree_mats[key]
+	mi.position = at
+	mi.rotation.y = rng.randf_range(0, TAU)
+	mi.scale = Vector3.ONE * size
+	add_child(mi)
+
+
+func _scatter_trees() -> void:
+	var placed := 0
+	var tries := 0
+	while placed < 140 and tries < 6000:
+		tries += 1
+		var x := rng.randf_range(-150, 150)
+		var z := rng.randf_range(-290, 200)
+		var d := _road_info(Vector2(x, z)).x
+		if d < 10.0 or d > 110.0:
+			continue
+		if Vector2(x, z).distance_to(ROUTE[11][1]) < 28.0 or Vector2(x, z).distance_to(ROUTE[8][1]) < 24.0:
+			continue
+		# woods thicken going down into the valley, in clumps
+		var dens := smoothstep(200.0, 40.0, z) * 0.75 + 0.15
+		if noise.get_noise_2d(x * 2.5, z * 2.5) < 0.0 or rng.randf() > dens:
+			continue
+		_tree_card("spruce", _ground(x, z), rng.randf_range(0.7, 1.15))
+		placed += 1
 
 
 ## The deserted village: roofless houses and the stump of a church tower, all from the
@@ -1028,9 +1085,7 @@ func _build_cemetery() -> void:
 		var side := (c - gate).orthogonal().normalized() * 3.5
 		for s in [-1.0, 1.0]:
 			var q: Vector2 = p + side * s
-			var tree := _place("fir_sapling", _ground(q.x, q.y), 1.0, rng.randf_range(0, TAU))
-			if tree:
-				tree.scale = Vector3(2.0, 5.5, 2.0)
+			_tree_card("cypress", _ground(q.x, q.y), rng.randf_range(0.9, 1.05))
 	_build_tomb(center, (gate - c).normalized(), marble, blocks)
 
 
@@ -1068,15 +1123,16 @@ func _build_tomb(center: Vector3, face: Vector2, marble: Material, blocks: Mater
 		door_right = door.find_child("large_castle_door_right", true, false) as Node3D
 	# inside: the bier and the one who lies on it
 	_block(Vector3(2.3, 0.7, 1.5), Vector3(0, 1.15, -1.2), marble, 0.0, true, tomb)
-	var sleeper := _scan("gothic_statue")
-	if sleeper:
-		var h := Node3D.new()
-		h.position = Vector3(0, 1.5, -1.2)
-		tomb.add_child(h)
-		h.add_child(sleeper)
-		sleeper.rotation.z = PI / 2
-		# lying on her back along the bier (the scan stands 1.74 m with its origin 1.19 m up)
-		sleeper.position = Vector3(0.85, 0.2, 0.41)
+	var shroud := MeshInstance3D.new()
+	shroud.mesh = _shroud_mesh(2.3, 1.5)
+	var linen := StandardMaterial3D.new()
+	linen.albedo_color = Color(0.86, 0.84, 0.8)
+	linen.roughness = 0.92
+	linen.cull_mode = BaseMaterial3D.CULL_DISABLED
+	linen.subsurf_scatter_enabled = false
+	shroud.material_override = linen
+	shroud.position = Vector3(0, 1.5, -1.2)
+	tomb.add_child(shroud)
 	var inner := OmniLight3D.new()
 	inner.position = Vector3(0.6, 3.6, 0.5)
 	inner.light_color = Color(0.75, 0.82, 1.0)
@@ -1141,6 +1197,148 @@ func _build_tomb(center: Vector3, face: Vector2, marble: Material, blocks: Mater
 		eyes.add_child(e)
 	eyes.visible = false
 	show_nodes["wolf"] = eyes
+
+
+## The one who lies on the bier, under a linen sheet: a body's shape (head on a pillow, shoulders,
+## hands folded on the breast, hips, legs, the feet lifting the cloth), the sheet settling over it in
+## folds and falling over the edges of the slab. Lying along x, head towards -x, on top of a slab
+## of the given length and depth.
+func _shroud_mesh(length: float, depth: float) -> ArrayMesh:
+	var parts := [  # centre x, centre z, radius x, radius z, height
+		[-0.93, 0.0, 0.2, 0.26, 0.07],    # pillow
+		[-0.9, 0.0, 0.12, 0.1, 0.25],     # head
+		[-0.66, 0.0, 0.1, 0.07, 0.15],    # neck
+		[-0.5, 0.0, 0.16, 0.25, 0.2],     # shoulders
+		[-0.3, 0.0, 0.26, 0.2, 0.23],     # breast, hands folded
+		[-0.28, 0.0, 0.1, 0.13, 0.27],    # the hands
+		[0.0, 0.0, 0.2, 0.21, 0.19],      # hips
+		[0.32, -0.08, 0.3, 0.09, 0.15],   # thighs
+		[0.32, 0.08, 0.3, 0.09, 0.15],
+		[0.7, -0.07, 0.22, 0.07, 0.11],   # shins
+		[0.7, 0.07, 0.22, 0.07, 0.11],
+		[0.93, -0.08, 0.05, 0.06, 0.22],  # feet
+		[0.93, 0.08, 0.05, 0.06, 0.22],
+	]
+	var hx := length / 2.0
+	var hz := depth / 2.0
+	var over := 0.32
+	var step := 0.022
+	var nx := int((length + 2 * over) / step) + 1
+	var nz := int((depth + 2 * over) / step) + 1
+	var cloth := FastNoiseLite.new()
+	cloth.seed = 1801
+	cloth.frequency = 3.2
+	# the body's height under the cloth
+	var hgt := PackedFloat32Array()
+	hgt.resize(nx * nz)
+	for j in nz:
+		for i in nx:
+			var x := -hx - over + i * step
+			var z := -hz - over + j * step
+			var hmax := 0.0
+			for pt in parts:
+				var dx: float = (x - pt[0]) / pt[2]
+				var dz: float = (z - pt[1]) / pt[3]
+				var q := 1.0 - dx * dx - dz * dz
+				if q > 0.0:
+					hmax = maxf(hmax, pt[4] * sqrt(q))
+			hgt[j * nx + i] = hmax
+	# the sheet does not cling: let it settle across the hollows (a few passes of smoothing that
+	# only ever lift it)
+	for pass_i in 6:
+		var nh := hgt.duplicate()
+		for j in range(1, nz - 1):
+			for i in range(1, nx - 1):
+				var avg := (hgt[j * nx + i - 1] + hgt[j * nx + i + 1] + hgt[(j - 1) * nx + i] + hgt[(j + 1) * nx + i]) * 0.25
+				nh[j * nx + i] = maxf(hgt[j * nx + i], avg * 0.97)
+		hgt = nh
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for j in nz:
+		for i in nx:
+			var x := -hx - over + i * step
+			var z := -hz - over + j * step
+			var cx := clampf(x, -hx - 0.01, hx + 0.01)
+			var cz := clampf(z, -hz - 0.01, hz + 0.01)
+			# past the edge of the slab the cloth falls straight down
+			var fall := maxf(absf(x) - hx, 0.0) + maxf(absf(z) - hz, 0.0)
+			var y := hgt[j * nx + i] + 0.012 - fall
+			var folds := cloth.get_noise_2d(x * 1.0, z * 2.2) * 0.012 + cloth.get_noise_2d(x * 0.4 + 9.0, z * 5.0) * 0.008 * (1.0 + fall * 6.0)
+			var pos := Vector3(cx, y + folds, cz)
+			if fall > 0.0:
+				# hanging folds swing a little out from the slab
+				var outv := Vector2(x - cx, z - cz).normalized() * folds * 2.5
+				pos += Vector3(outv.x, 0, outv.y)
+			st.set_uv(Vector2(x, z))
+			st.add_vertex(pos)
+	for j in nz - 1:
+		for i in nx - 1:
+			var a := j * nx + i
+			st.add_index(a)
+			st.add_index(a + nx)
+			st.add_index(a + 1)
+			st.add_index(a + 1)
+			st.add_index(a + nx)
+			st.add_index(a + nx + 1)
+	st.generate_normals()
+	return st.commit()
+
+
+## The telegram as a real printed form: a page drawn in the game's own type, used as the
+## paper's picture.
+func _telegram_texture() -> Texture2D:
+	var vp := SubViewport.new()
+	vp.size = Vector2i(1100, 780)
+	vp.disable_3d = true
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	add_child(vp)
+	var bg := ColorRect.new()
+	bg.color = Color(0.9, 0.86, 0.76)
+	bg.size = Vector2(vp.size)
+	vp.add_child(bg)
+	var ink := Color(0.13, 0.1, 0.08)
+	var rule := ColorRect.new()
+	rule.color = Color(ink, 0.7)
+	rule.position = Vector2(60, 150)
+	rule.size = Vector2(980, 3)
+	vp.add_child(rule)
+	var rule2 := rule.duplicate()
+	rule2.position = Vector2(60, 700)
+	vp.add_child(rule2)
+	var head := Label.new()
+	head.text = "TELEGRAMM"
+	head.add_theme_font_override("font", load("res://fonts/IMFeENsc28P.ttf"))
+	head.add_theme_font_size_override("font_size", 64)
+	head.add_theme_color_override("font_color", ink)
+	head.position = Vector2(60, 50)
+	head.size = Vector2(980, 90)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vp.add_child(head)
+	var meta := Label.new()
+	meta.text = "Aufgegeben in BISTRITZ          an Herrn Delbrück, Hotel Quatre Saisons, MÜNCHEN"
+	meta.add_theme_font_override("font", load("res://fonts/OldStandard-Regular.ttf"))
+	meta.add_theme_font_size_override("font_size", 22)
+	meta.add_theme_color_override("font_color", Color(ink, 0.8))
+	meta.position = Vector2(60, 166)
+	vp.add_child(meta)
+	var body := Label.new()
+	body.text = "Be careful of my guest—his safety is most precious to me. Should aught happen to him, or if he be missed, spare nothing to find him and ensure his safety. He is English and therefore adventurous. There is often danger from snow and wolves and night. Lose not a moment if you suspect harm to him. I answer your zeal with my fortune."
+	body.add_theme_font_override("font", load("res://fonts/OldStandard-Italic.ttf"))
+	body.add_theme_font_size_override("font_size", 38)
+	body.add_theme_color_override("font_color", ink)
+	body.add_theme_constant_override("line_spacing", 6)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.position = Vector2(70, 220)
+	body.size = Vector2(960, 400)
+	vp.add_child(body)
+	var sign := Label.new()
+	sign.text = "Dracula."
+	sign.add_theme_font_override("font", load("res://fonts/IMFeENsc28P.ttf"))
+	sign.add_theme_font_size_override("font_size", 46)
+	sign.add_theme_color_override("font_color", ink)
+	sign.position = Vector2(700, 625)
+	vp.add_child(sign)
+	return vp.get_texture()
 
 
 func _build_stations() -> void:

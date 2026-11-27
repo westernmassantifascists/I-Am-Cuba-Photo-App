@@ -23,5 +23,15 @@ window/stretch/aspect="expand"
 
 [rendering]
 
+renderer/rendering_method.web="gl_compatibility"
+
 anti_aliasing/quality/msaa_3d=1
 textures/vram_compression/import_etc2_astc=true
+
+[importer_defaults]
+
+texture={
+"compress/mode": 1,
+"compress/lossy_quality": 0.8,
+"mipmaps/generate": true
+}

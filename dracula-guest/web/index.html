@@ -1,0 +1,169 @@
+<title>Dracula's Guest</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Old+Standard+TT:ital@0;1&display=swap">
+<style>
+/* One dark world, like the game: the night road, the marble, the lamp. A full-bleed stage with the
+   title card set in the game's own type; the canvas takes over once you begin. */
+:root {
+  --night: #0c0d0d;      /* the developed background of the piece */
+  --marble: #dbe0e6;     /* its lightest colour: the text */
+  --frost: #8d98a5;      /* dim text */
+  --lamp: #bfa888;       /* the accent: lamp-light on brass */
+  --rule: #2a2d30;
+  --display: "IM Fell English SC", "Iowan Old Style", Georgia, serif;
+  --text: "Old Standard TT", "Iowan Old Style", Georgia, serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--night); color: var(--marble); font-family: var(--text); overflow: hidden; }
+#canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: #000; outline: none; }
+#card {
+  position: fixed; inset: 0; display: grid; place-items: center; z-index: 2;
+  background: radial-gradient(ellipse at 50% 38%, #15181a 0%, var(--night) 62%);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-bottom, 0px));
+  transition: opacity 1.6s ease;
+}
+#card.gone { opacity: 0; pointer-events: none; }
+.inner { max-width: 34rem; text-align: center; display: grid; gap: 1.1rem; }
+.kicker { font-size: .78rem; letter-spacing: .32em; text-transform: uppercase; color: var(--frost); }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(2.6rem, 9vw, 5rem); line-height: 1; margin: 0; letter-spacing: .02em; text-wrap: balance; }
+.sub { font-style: italic; color: var(--frost); font-size: 1.08rem; line-height: 1.55; margin: 0; text-wrap: pretty; }
+.date { font-family: var(--display); color: var(--lamp); font-size: 1.05rem; letter-spacing: .06em; }
+button {
+  justify-self: center; font: inherit; font-family: var(--display); font-size: 1.35rem; letter-spacing: .06em;
+  color: var(--night); background: var(--lamp); border: 0; padding: .65rem 2.2rem; cursor: pointer;
+}
+button:hover { background: var(--marble); }
+button:focus-visible { outline: 2px solid var(--marble); outline-offset: 4px; }
+button:disabled { background: var(--rule); color: var(--frost); cursor: progress; }
+.bar { height: 2px; background: var(--rule); width: min(22rem, 80vw); justify-self: center; }
+.bar i { display: block; height: 100%; width: 0; background: var(--lamp); transition: width .3s; }
+#status { font-size: .85rem; color: var(--frost); min-height: 1.3em; font-variant-numeric: tabular-nums; }
+.keys { font-size: .82rem; color: var(--frost); letter-spacing: .04em; line-height: 1.7; border-top: 1px solid var(--rule); padding-top: 1rem; }
+.keys b { font-family: var(--display); font-weight: 400; color: var(--marble); letter-spacing: .08em; }
+.credit { font-size: .72rem; color: #5f6872; line-height: 1.6; }
+@media (prefers-reduced-motion: reduce) { #card { transition: none; } }
+</style>
+
+<canvas id="canvas" tabindex="0">Your browser does not support WebGL 2.</canvas>
+
+<div id="card">
+  <div class="inner">
+    <div class="kicker">Bram Stoker · 1914</div>
+    <h1>Dracula's Guest</h1>
+    <p class="sub">Munich, the Quatre Saisons. The coachman will not take the valley road tonight, and you go on alone, on foot, into the snow.</p>
+    <div class="date">Walpurgis Nacht · 30 April</div>
+    <button id="go" type="button" disabled>Loading</button>
+    <div class="bar" aria-hidden="true"><i id="fill"></i></div>
+    <div id="status" role="status">Fetching the road…</div>
+    <div class="keys"><b>Walk</b> W A S D &nbsp; <b>Look</b> mouse &nbsp; <b>Hurry</b> Shift &nbsp; <b>Choose</b> click<br>Esc frees the mouse. Best with headphones, on a computer.</div>
+    <div class="credit">Photogrammetry, surfaces and skies: Poly Haven (CC0). Score made on the Darkroom groovebox.<br>Type: IM Fell English, Old Standard TT (SIL OFL). Built with Godot.</div>
+  </div>
+</div>
+
+<script>
+// The engine and the game are split into pieces small enough to host; they are fetched here and
+// handed to Godot whole, as if they were the single files it asks for.
+(function () {
+  const status = document.getElementById('status');
+  const fill = document.getElementById('fill');
+  const go = document.getElementById('go');
+  const assembled = {};
+  let manifest = null;
+
+  let got = 0, need = 0;
+  const seen = {};
+  function progress() {
+    got = 0;
+    for (const k in seen) got += seen[k];
+    const pct = need ? Math.min(100, (got / need) * 100) : 0;
+    fill.style.width = pct.toFixed(1) + '%';
+  }
+
+  window.__realFetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    const url = typeof input === 'string' ? input : input.url;
+    const name = url.split('/').pop().split('?')[0];
+    if (manifest && manifest.files[name]) {
+      return (assembled[name] || (assembled[name] = load(name))).then((bytes) => new Response(bytes, {
+        status: 200,
+        headers: { 'Content-Type': name.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream', 'Content-Length': String(bytes.length) },
+      }));
+    }
+    return window.__realFetch(input, init);
+  };
+
+  async function load(name) {
+    const parts = manifest.files[name].parts;
+    const total = manifest.files[name].size;
+    const out = new Uint8Array(total);
+    let at = 0;
+    for (const p of parts) {
+      const r = await window.__realFetch(p);
+      if (!r.ok) throw new Error('Could not load ' + p + ' (' + r.status + ')');
+      const reader = r.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        out.set(value, at);
+        at += value.length;
+        seen[name] = at;
+        progress();
+        status.textContent = 'Fetching the road… ' + Math.round(got / 1048576) + ' of ' + Math.round(need / 1048576) + ' MB';
+      }
+    }
+    return out;
+  }
+
+  async function boot() {
+    try {
+      manifest = await (await window.__realFetch('pieces.json')).json();
+      need = Object.values(manifest.files).reduce((s, f) => s + f.size, 0);
+      // start pulling everything now, so it is ready by the time the button is pressed
+      Promise.all(Object.keys(manifest.files).map((n) => assembled[n] || (assembled[n] = load(n)))).then(() => {
+        status.textContent = 'Ready.';
+        go.disabled = false;
+        go.textContent = 'Begin';
+        go.focus();
+      }, fail);
+    } catch (e) { fail(e); }
+  }
+
+  function fail(e) {
+    status.textContent = 'The game could not load: ' + (e && e.message ? e.message : e) + '. Reload the page to try again.';
+    go.textContent = 'Not loaded';
+  }
+
+  go.addEventListener('click', () => {
+    go.disabled = true;
+    go.textContent = 'Starting';
+    status.textContent = 'Building the valley…';
+    if (typeof Engine === 'undefined') { fail('the engine script did not load'); return; }
+    if (!Engine.isWebGLAvailable(2)) { fail('this browser has no WebGL 2'); return; }
+    const engine = new Engine({
+      executable: 'index',
+      mainPack: 'index.pck',
+      canvas: document.getElementById('canvas'),
+      canvasResizePolicy: 2,
+      focusCanvas: true,
+      ensureCrossOriginIsolationHeaders: false,
+      experimentalVK: false,
+      serviceWorker: '',
+      gdextensionLibs: [],
+      fileSizes: { 'index.wasm': manifest.files['index.wasm'].size, 'index.pck': manifest.files['index.pck'].size },
+      args: [],
+    });
+    engine.startGame({
+      onProgress: () => {},
+    }).then(() => {
+      document.getElementById('card').classList.add('gone');
+      document.getElementById('canvas').focus();
+    }, fail);
+  });
+
+  boot();
+})();
+</script>
+<script src="index.js"></script>

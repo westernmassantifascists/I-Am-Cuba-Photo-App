@@ -20,7 +20,7 @@ for (const name of ['index.wasm', 'index.pck']) {
   const buf = fs.readFileSync(path.join(SRC, name));
   const parts = [];
   for (let i = 0, n = 0; i < buf.length; i += PIECE, n++) {
-    const part = `${name.replace('.', '-')}-${String(n).padStart(2, '0')}.bin`;
+    const part = `${name.replace('.', '-')}-${String(n).padStart(2, '0')}.wasm`;
     fs.writeFileSync(path.join(OUT, part), buf.subarray(i, i + PIECE));
     parts.push(part);
   }

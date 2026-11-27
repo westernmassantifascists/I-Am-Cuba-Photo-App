@@ -3,7 +3,7 @@ shader_type canvas_item;
 // developed from the piece's own scans, textures and skies: how saturated the material is, its contrast,
 // the tint of its darkest and lightest colours. The current place's developed mood is blended in on top.
 
-uniform sampler2D screen : hint_screen_texture, filter_linear_mipmap;
+uniform sampler2D screen : hint_screen_texture, filter_linear;
 // developed base grade
 uniform float saturation = 0.7;
 uniform float contrast = 1.15;
@@ -36,8 +36,15 @@ void fragment() {
 	vec3 c = texture(screen, uv).rgb;
 
 	// halation: bright areas bleed a warm glow into the dark around them
-	vec3 glow = textureLod(screen, uv, 4.0).rgb + textureLod(screen, uv, 5.5).rgb;
-	float gl = max(dot(glow * 0.5, vec3(0.333)) - 0.55, 0.0);
+	// (a ring of wide taps rather than mipmaps, so it also runs in a browser)
+	vec3 glow = vec3(0.0);
+	for (int i = 0; i < 8; i++) {
+		float a = float(i) * 0.785398;
+		vec2 o = vec2(cos(a), sin(a)) * SCREEN_PIXEL_SIZE;
+		glow += texture(screen, uv + o * 14.0).rgb + texture(screen, uv + o * 34.0).rgb;
+	}
+	glow /= 16.0;
+	float gl = max(dot(glow, vec3(0.333)) - 0.55, 0.0) * 2.0;
 	c += halation * gl * vec3(1.0, 0.72, 0.55);
 
 	// developed grade, then the place's mood

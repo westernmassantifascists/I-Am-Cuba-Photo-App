@@ -51,13 +51,13 @@ button:disabled { background: var(--rule); color: var(--frost); cursor: progress
 
 <div id="card">
   <div class="inner">
-    <div class="kicker">Bram Stoker · 1914</div>
+    <div class="kicker">Bram Stoker &middot; 1914</div>
     <h1>Dracula's Guest</h1>
     <p class="sub">Munich, the Quatre Saisons. The coachman will not take the valley road tonight, and you go on alone, on foot, into the snow.</p>
-    <div class="date">Walpurgis Nacht · 30 April</div>
+    <div class="date">Walpurgis Nacht &middot; 30 April</div>
     <button id="go" type="button" disabled>Loading</button>
     <div class="bar" aria-hidden="true"><i id="fill"></i></div>
-    <div id="status" role="status">Fetching the road…</div>
+    <div id="status" role="status">Fetching the road&hellip;</div>
     <div class="keys"><b>Walk</b> W A S D &nbsp; <b>Look</b> mouse &nbsp; <b>Hurry</b> Shift &nbsp; <b>Choose</b> click<br>Esc frees the mouse. Best with headphones, on a computer.</div>
     <div class="credit">Photogrammetry, surfaces and skies: Poly Haven (CC0). Score made on the Darkroom groovebox.<br>Type: IM Fell English, Old Standard TT (SIL OFL). Built with Godot.</div>
   </div>
@@ -111,7 +111,7 @@ button:disabled { background: var(--rule); color: var(--frost); cursor: progress
         at += value.length;
         seen[name] = at;
         progress();
-        status.textContent = 'Fetching the road… ' + Math.round(got / 1048576) + ' of ' + Math.round(need / 1048576) + ' MB';
+        status.textContent = 'Fetching the road\u2026 ' + Math.round(got / 1048576) + ' of ' + Math.round(need / 1048576) + ' MB';
       }
     }
     return out;
@@ -139,7 +139,7 @@ button:disabled { background: var(--rule); color: var(--frost); cursor: progress
   go.addEventListener('click', () => {
     go.disabled = true;
     go.textContent = 'Starting';
-    status.textContent = 'Building the valley…';
+    status.textContent = 'Building the valley\u2026';
     if (typeof Engine === 'undefined') { fail('the engine script did not load'); return; }
     if (!Engine.isWebGLAvailable(2)) { fail('this browser has no WebGL 2'); return; }
     const engine = new Engine({

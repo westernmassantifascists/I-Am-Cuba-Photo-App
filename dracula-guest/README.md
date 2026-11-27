@@ -88,6 +88,18 @@ the mouse. A gamepad works too.
 (meters, conditions, turns, drift, endings) and only sends signals, so another piece can reuse it with a
 different world.
 
+## Playing it in a browser
+
+```
+godot --headless --path godot --export-release Web ../.cache/web/index.html
+node tools/web-pack.mjs      # -> .cache/site/, the engine and game cut into 14 MB pieces
+```
+
+`.cache/site/` is a static site (single-threaded build, no special server headers needed). Its page
+(`web/index.html`) fetches the pieces and hands them to Godot whole. The browser uses Godot's
+Compatibility renderer, so the trees are baked cut-outs (`godot/tools/bake_trees.gd`, run once with a
+GPU; the pictures in `godot/assets/trees` are committed) and textures are stored as lossy WebP.
+
 ## Testing
 
 The game can play itself, headless, choosing at random:

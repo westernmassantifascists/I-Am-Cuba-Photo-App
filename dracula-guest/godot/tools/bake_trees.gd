@@ -18,7 +18,11 @@ func _init() -> void:
 
 
 func _bake() -> void:
-	for kind in ["spruce", "cypress"]:
+	var kinds := ["spruce", "cypress"]
+	var asked := OS.get_cmdline_user_args()
+	if not asked.is_empty():
+		kinds = Array(asked)
+	for kind in kinds:
 		for v in VARIANTS:
 			var rng := RandomNumberGenerator.new()
 			rng.seed = hash(kind) + v * 7919

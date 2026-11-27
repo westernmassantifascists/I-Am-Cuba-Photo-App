@@ -834,6 +834,7 @@ func _build_munich() -> void:
 	var form := StandardMaterial3D.new()
 	form.albedo_texture = _telegram_texture()
 	form.roughness = 0.95
+	form.albedo_color = Color(0.6, 0.57, 0.52)
 	tq.material_override = form
 	tel.add_child(tq)
 	show_nodes["telegram"] = tel
@@ -1241,16 +1242,16 @@ func _shroud_mesh(length: float, depth: float) -> ArrayMesh:
 				var dz: float = (z - pt[1]) / pt[3]
 				var q := 1.0 - dx * dx - dz * dz
 				if q > 0.0:
-					hmax = maxf(hmax, pt[4] * sqrt(q))
+					hmax = maxf(hmax, pt[4] * 1.35 * sqrt(q))
 			hgt[j * nx + i] = hmax
 	# the sheet does not cling: let it settle across the hollows (a few passes of smoothing that
 	# only ever lift it)
-	for pass_i in 6:
+	for pass_i in 5:
 		var nh := hgt.duplicate()
 		for j in range(1, nz - 1):
 			for i in range(1, nx - 1):
 				var avg := (hgt[j * nx + i - 1] + hgt[j * nx + i + 1] + hgt[(j - 1) * nx + i] + hgt[(j + 1) * nx + i]) * 0.25
-				nh[j * nx + i] = maxf(hgt[j * nx + i], avg * 0.97)
+				nh[j * nx + i] = lerpf(hgt[j * nx + i], avg, 0.6)
 		hgt = nh
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -1263,7 +1264,7 @@ func _shroud_mesh(length: float, depth: float) -> ArrayMesh:
 			# past the edge of the slab the cloth falls straight down
 			var fall := maxf(absf(x) - hx, 0.0) + maxf(absf(z) - hz, 0.0)
 			var y := hgt[j * nx + i] + 0.012 - fall
-			var folds := cloth.get_noise_2d(x * 1.0, z * 2.2) * 0.012 + cloth.get_noise_2d(x * 0.4 + 9.0, z * 5.0) * 0.008 * (1.0 + fall * 6.0)
+			var folds := cloth.get_noise_2d(x * 0.6, z * 1.4) * 0.006 + cloth.get_noise_2d(x * 0.3 + 9.0, z * 3.0) * 0.006 * (1.0 + fall * 8.0)
 			var pos := Vector3(cx, y + folds, cz)
 			if fall > 0.0:
 				# hanging folds swing a little out from the slab
@@ -1296,7 +1297,7 @@ func _telegram_texture() -> Texture2D:
 	bg.color = Color(0.9, 0.86, 0.76)
 	bg.size = Vector2(vp.size)
 	vp.add_child(bg)
-	var ink := Color(0.13, 0.1, 0.08)
+	var ink := Color(0.06, 0.045, 0.035)
 	var rule := ColorRect.new()
 	rule.color = Color(ink, 0.7)
 	rule.position = Vector2(60, 150)
@@ -1323,8 +1324,8 @@ func _telegram_texture() -> Texture2D:
 	vp.add_child(meta)
 	var body := Label.new()
 	body.text = "Be careful of my guest—his safety is most precious to me. Should aught happen to him, or if he be missed, spare nothing to find him and ensure his safety. He is English and therefore adventurous. There is often danger from snow and wolves and night. Lose not a moment if you suspect harm to him. I answer your zeal with my fortune."
-	body.add_theme_font_override("font", load("res://fonts/OldStandard-Italic.ttf"))
-	body.add_theme_font_size_override("font_size", 38)
+	body.add_theme_font_override("font", load("res://fonts/OldStandard-Regular.ttf"))
+	body.add_theme_font_size_override("font_size", 40)
 	body.add_theme_color_override("font_color", ink)
 	body.add_theme_constant_override("line_spacing", 6)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

@@ -37,6 +37,9 @@ const MAP_X1 := 160.0
 const MAP_Z0 := -300.0
 const MAP_Z1 := 370.0
 const ROAM := 60.0
+## lightning over the deserted village: how near counts as "in" it, and seconds between strikes
+const VILLAGE_RADIUS := 55.0
+const VILLAGE_LIGHTNING := 6.0
 ## Munich is not on the map: it is a small lit table in the dark, a still life far above the valley.
 const MUNICH := Vector3(0, 400, 900)
 
@@ -414,12 +417,19 @@ func _process(delta: float) -> void:
 		var at := shot_cam.global_position if shot_cam.current else player.global_position
 		snow.global_position = at + Vector3(0, 12, 0)
 		hail.global_position = at + Vector3(0, 12, 0)
-	if lightning_every > 0.0:
+	# the deserted village always stands under lightning, whatever the weather on the road
+	var every := lightning_every
+	var in_village := _in_village()
+	if in_village:
+		every = minf(every, VILLAGE_LIGHTNING) if every > 0.0 else VILLAGE_LIGHTNING
+	if every > 0.0:
 		_lightning_t -= delta
 		if _lightning_t <= 0.0:
-			_lightning_t = rng.randf_range(lightning_every * 0.5, lightning_every * 1.5)
-			_lightning()
-			get_tree().create_timer(rng.randf_range(0.6, 2.0)).timeout.connect(func(): music.sfx("res://assets/music/sfx_thunder%s.ogg" % ["", "_2"][rng.randi() % 2], 0.8))
+			_lightning_t = rng.randf_range(every * 0.5, every * 1.5)
+			_lightning(in_village)
+			# thunder follows the flash: close strikes crack soon after, far ones roll in later
+			var near := rng.randf() < 0.5
+			get_tree().create_timer(rng.randf_range(0.3, 0.9) if near else rng.randf_range(1.4, 3.0)).timeout.connect(func(): music.sfx("res://assets/music/sfx_thunder%s.ogg" % ("" if near else "_2"), 0.95 if near else 0.75))
 
 
 ## Colour, fog and snow follow the weather, the developed look and the feelings.
@@ -482,13 +492,25 @@ func _apply_weather(name: String, instant := false) -> void:
 	lightning_every = w.get("lightning", 0.0)
 
 
-func _lightning() -> void:
+func _lightning(bright := false) -> void:
 	var e := sun.light_energy
 	sun.light_energy = 3.0
 	env.background_energy_multiplier = 2.0
 	var tw := create_tween()
 	tw.tween_property(sun, "light_energy", e, 0.35)
 	tw.parallel().tween_property(env, "background_energy_multiplier", WEATHER[weather].sky_energy, 0.5)
+	if bright and ui:
+		# among the ruins the flash whitens the whole sky for an instant, sometimes twice
+		ui.fx("lightning", 0.45)
+		if rng.randf() < 0.45:
+			get_tree().create_timer(0.16).timeout.connect(func(): ui.fx("lightning", 0.3))
+
+
+func _in_village() -> bool:
+	if player == null:
+		return false
+	var at := shot_cam.global_position if shot_cam and shot_cam.current else player.global_position
+	return Vector2(at.x, at.z).distance_to(ROUTE[8][1]) < VILLAGE_RADIUS
 
 
 # ================================================================== building the world

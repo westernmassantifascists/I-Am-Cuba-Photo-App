@@ -396,6 +396,9 @@ func fx(kind: String, seconds: float) -> void:
 		"flash":
 			veil.color = Color(1, 1, 1, 0.95)
 			tw.tween_property(veil, "color:a", 0.0, seconds)
+		"lightning":
+			veil.color = Color(0.86, 0.9, 1.0, 0.55)
+			tw.tween_property(veil, "color:a", 0.0, seconds).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_EXPO)
 		"fadeout":
 			veil.color = Color(0, 0, 0, veil.color.a)
 			tw.tween_property(veil, "color:a", 1.0, seconds)

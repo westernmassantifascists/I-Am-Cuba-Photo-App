@@ -863,7 +863,13 @@ func _render_views(dir: String) -> void:
 		["tomb", "moon", stations.tomb + Vector3(7, 1.7, 13), stations.tomb + Vector3(0, 3, 0), 1.0, 0.6],
 		["dawn", "dawn", stations.tomb + Vector3(-10, 2.0, 16), stations.tomb + Vector3(0, 2, 0), 0.2, 0.9],
 	]
+	var only: Array = []
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--only="):
+			only = a.substr(7).split(",")
 	for v in views:
+		if not only.is_empty() and not only.has(v[0]):
+			continue
 		_apply_weather(v[1], true)
 		ground_snow = v[5]
 		Story.S["dread"] = v[4] * 60.0

@@ -47,7 +47,7 @@ Open Font License, in `godot/fonts`).
 | 7 real photographed skies (a day at Kloppenheim, Germany, plus snow) | Poly Haven | CC0 |
 | Film: British Pathé street traffic (1896–1903); Georges Méliès, *Le Chevalier des Neiges* (1913) | Wikimedia Commons | public domain |
 | Fonts: Old Standard TT, IM Fell English SC | Google Fonts | SIL OFL 1.1 |
-| Music | composed on the Darkroom groovebox (`../darkroom/lib/groovebox.mjs`) | ours |
+| Music | an orchestral score (bowed strings, brass, choir, timpani — all synthesized) composed on the Darkroom groovebox (`../darkroom/lib/groovebox.mjs`) | ours |
 
 `tools/fetch.mjs` writes the full list with authors to `CREDITS.md`.
 

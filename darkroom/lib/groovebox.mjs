@@ -179,6 +179,112 @@ function renderNote(inst, freq, dur, vel) {
       const rumble = f1(rnd(), 120 + 80 * Math.exp(-t), 0.4).lp * Math.exp(-t / (inst.decay ?? 3)) * (1 + 0.5 * Math.sin(TAU * 3 * t + rnd()));
       out[i] = (crack + rumble * 3) * g;
     }
+  } else if (type === 'strings') {
+    // a bowed section: many slightly out-of-tune players, each with their own slow vibrato, a bow
+    // attack, a body that brightens with force; optional tremolo (rapid re-bowing) and marcato.
+    const n = inst.players ?? 7;
+    const ph = [];
+    const cents = [];
+    const vib = [];
+    for (let k = 0; k < n; k++) {
+      ph.push(Math.random());
+      cents.push(rnd() * (inst.spread ?? 9));
+      vib.push({ rate: 4.8 + rnd() * 0.9, phase: Math.random() * TAU });
+    }
+    const body = svf();
+    const air = svf();
+    const a = inst.attack ?? 0.18;
+    const trem = inst.tremolo ?? 0;
+    const bright = (inst.cutoff ?? 1600) * (0.55 + 0.6 * vel);
+    for (let i = 0; i < len; i++) {
+      const t = i / SR;
+      const vibDepth = (inst.vibrato ?? 0.12) * Math.min(1, t / 0.6);
+      let x = 0;
+      for (let k = 0; k < n; k++) {
+        const v = vibDepth * Math.sin(TAU * vib[k].rate * t + vib[k].phase);
+        ph[k] += (freq * 2 ** ((cents[k] / 100 + v) / 12)) / SR;
+        x += osc(inst.wave || 'saw', ph[k]);
+      }
+      x /= Math.sqrt(n) * 1.6;
+      let env = adsr(t, dur, a, inst.decay ?? 0.3, inst.sustain ?? 0.85, tail);
+      if (inst.marcato) env *= 1 + 0.9 * Math.exp(-t / 0.09);
+      if (trem) env *= 0.55 + 0.45 * Math.abs(Math.sin(Math.PI * trem * t + 0.3 * Math.sin(TAU * 0.7 * t)));
+      const scrape = rnd() * 0.08 * Math.exp(-t / 0.05) * (inst.marcato ? 2 : 1);
+      const y = body(x + scrape, bright * (1 + 0.5 * Math.exp(-t / 0.15)), 0.25).lp;
+      out[i] = (y - air(y, 60, 0.1).lp) * env * g;
+    }
+  } else if (type === 'brass') {
+    // horns / trombones: a lip scoop into the note, the bell opening as the player pushes
+    const n = inst.players ?? 3;
+    const ph = Array.from({ length: n }, () => Math.random());
+    const cents = Array.from({ length: n }, (_, k) => (k - (n - 1) / 2) * (inst.spread ?? 6));
+    const filt = svf();
+    const a = inst.attack ?? 0.08;
+    for (let i = 0; i < len; i++) {
+      const t = i / SR;
+      const scoop = -0.35 * Math.exp(-t / 0.05);
+      let x = 0;
+      for (let k = 0; k < n; k++) {
+        ph[k] += (freq * 2 ** ((scoop + cents[k] / 100 + 0.04 * Math.sin(TAU * 5 * t) * Math.min(1, t)) / 12)) / SR;
+        x += osc('saw', ph[k]);
+      }
+      x /= n;
+      const env = adsr(t, dur, a, inst.decay ?? 0.4, inst.sustain ?? 0.8, tail);
+      const push = (inst.cutoff ?? 900) * (0.4 + vel * (inst.bright ?? 1.6) * (0.6 + 0.4 * env) + 1.2 * Math.exp(-t / 0.12) * vel);
+      out[i] = filt(x, push, 0.3).lp * env * g;
+    }
+  } else if (type === 'choir') {
+    // voices on a vowel: a chorus of glottal sources through three formant filters, with breath
+    const VOWELS = { a: [800, 1150, 2900], o: [450, 800, 2830], u: [325, 700, 2700], e: [400, 1600, 2700] };
+    const fm = VOWELS[inst.vowel || 'a'];
+    const n = inst.voices ?? 6;
+    const ph = Array.from({ length: n }, () => Math.random());
+    const cents = Array.from({ length: n }, () => rnd() * 12);
+    const vr = Array.from({ length: n }, () => 5 + rnd() * 0.8);
+    const f1 = svf();
+    const f2 = svf();
+    const f3 = svf();
+    const a = inst.attack ?? 1.2;
+    for (let i = 0; i < len; i++) {
+      const t = i / SR;
+      let x = 0;
+      for (let k = 0; k < n; k++) {
+        ph[k] += (freq * 2 ** ((cents[k] / 100 + 0.1 * Math.sin(TAU * vr[k] * t + k)) / 12)) / SR;
+        const p = ph[k] - Math.floor(ph[k]);
+        x += p < 0.35 ? Math.sin(Math.PI * p / 0.35) : 0; // a soft glottal pulse
+      }
+      x = x / n + rnd() * 0.04;
+      const y = f1(x, fm[0], 0.85).bp * 1.0 + f2(x, fm[1], 0.85).bp * 0.5 + f3(x, fm[2], 0.9).bp * 0.25;
+      out[i] = y * adsr(t, dur, a, 0.5, 0.9, tail) * g * 2.5;
+    }
+  } else if (type === 'timpani') {
+    // a tuned kettledrum: inharmonic membrane modes, a felt strike, the pitch settling
+    const modes = [[1, 1, 1], [1.5, 0.5, 0.7], [1.98, 0.35, 0.55], [2.44, 0.2, 0.4], [2.94, 0.12, 0.3]];
+    const ph = modes.map(() => 0);
+    const strike = svf();
+    const decay = inst.decay ?? 2.2;
+    for (let i = 0; i < len; i++) {
+      const t = i / SR;
+      const glide = 1 + 0.03 * Math.exp(-t / 0.08);
+      let x = 0;
+      for (let k = 0; k < modes.length; k++) {
+        ph[k] += (freq * modes[k][0] * glide) / SR;
+        x += Math.sin(TAU * ph[k]) * modes[k][1] * Math.exp(-t / (decay * modes[k][2]));
+      }
+      x += strike(rnd(), 400, 0.2).lp * Math.exp(-t / 0.02) * 1.5;
+      out[i] = x * g * Math.min(1, t / 0.002);
+    }
+  } else if (type === 'gran') {
+    // the gran cassa: a huge, loose bass drum
+    const f = svf();
+    let ph = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / SR;
+      ph += (freq * (1 + 0.25 * Math.exp(-t / 0.05))) / SR;
+      const boom = Math.sin(TAU * ph) * Math.exp(-t / (inst.decay ?? 1.6));
+      const skin = f(rnd(), 140, 0.3).lp * Math.exp(-t / 0.6) * 2.5;
+      out[i] = (boom + skin) * g * Math.min(1, t / 0.004);
+    }
   } else {
     throw new Error(`unknown instrument type "${type}"`);
   }
@@ -284,7 +390,7 @@ export function renderStem(score, stemName) {
       }
     }
     if (tr.delay) delay(tL, tR, tr.delay.time ?? stepSec * 3, tr.delay.feedback ?? 0.4, tr.delay.mix ?? 0.4);
-    if (tr.reverb) reverb(tL, tR, tr.reverb);
+    if (tr.reverb) reverb(tL, tR, tr.reverb, tr.room ?? score.room ?? 0.84);
     for (let s = 0; s < L.length; s++) {
       L[s] += tL[s];
       R[s] += tR[s];

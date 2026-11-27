@@ -105,6 +105,13 @@ node tools/web-pack.mjs      # -> .cache/site/, the engine and game cut into 14 
 Compatibility renderer, so the trees are baked cut-outs (`godot/tools/bake_trees.gd`, run once with a
 GPU; the pictures in `godot/assets/trees` are committed) and textures are stored as lossy WebP.
 
+## The orchestra, to play yourself
+
+`node tools/build-instrument.mjs` (after `fetch-samples.mjs` and `fetch-sfx.mjs`) cuts a browser-sized
+set of the score's recorded instruments, looped and levelled, into `.cache/instrument/` with the page
+`web/instrument.html`: an on-screen and computer-keyboard sampler with dynamics, sustain pedal,
+release and a stone-room reverb. Serve that folder with any static server to play it.
+
 ## Testing
 
 The game can play itself, headless, choosing at random:

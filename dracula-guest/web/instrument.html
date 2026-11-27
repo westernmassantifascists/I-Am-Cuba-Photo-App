@@ -1,0 +1,431 @@
+<title>Dracula's Guest Orchestra</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* A night-black console, set like the game: IM Fell small caps for names, Old Standard for the
+   rest, lamp-brass for what is lit. The keyboard is the instrument: ebony and bone, full width. */
+:root {
+  --night: #0c0d0d;
+  --panel: #151719;
+  --rule: #2a2d30;
+  --marble: #dbe0e6;
+  --frost: #8d98a5;
+  --lamp: #bfa888;
+  --ivory: #e6e1d6;
+  --ivory-down: #bfa888;
+  --ebony: #17191b;
+  --ebony-down: #6b5d49;
+  --display: "IM Fell English SC", "Iowan Old Style", Georgia, serif;
+  --text: "Old Standard TT", "Iowan Old Style", Georgia, serif;
+  color-scheme: dark;
+}
+body { background: var(--night); color: var(--marble); font-family: var(--text); font-size: 16px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 40px; display: grid; gap: 22px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(1.9rem, 5vw, 2.8rem); margin: 0; letter-spacing: .02em; line-height: 1.05; }
+.sub { color: var(--frost); font-style: italic; margin: 0; max-width: 40rem; }
+.kicker { font-size: .75rem; letter-spacing: .28em; text-transform: uppercase; color: var(--frost); }
+
+.choose { display: grid; padding-top: 4px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 18px; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 6px; align-content: start; }
+legend { font-size: .72rem; letter-spacing: .26em; text-transform: uppercase; color: var(--frost); margin-bottom: 6px; padding: 0; }
+.inst { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; font: inherit; color: var(--marble); background: transparent; border: 1px solid var(--rule); padding: .42rem .7rem; cursor: pointer; }
+.inst:hover { border-color: var(--frost); }
+.inst[aria-pressed="true"] { border-color: var(--lamp); color: var(--lamp); background: #1c1a16; }
+.inst .state { font-size: .72rem; color: var(--frost); font-variant-numeric: tabular-nums; }
+.inst:focus-visible, .pad:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+
+.console { display: flex; flex-wrap: wrap; gap: 14px 26px; align-items: center; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding-block: 14px; }
+.ctl { display: grid; gap: 4px; min-width: 0; }
+.ctl label, .ctl .lbl { font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: var(--frost); }
+.ctl output { color: var(--lamp); font-family: var(--display); font-size: 1.05rem; }
+input[type="range"] { width: 160px; max-width: 42vw; accent-color: var(--lamp); }
+.oct { display: flex; align-items: center; gap: 8px; }
+.oct button, .sus { font: inherit; font-family: var(--display); color: var(--marble); background: var(--panel); border: 1px solid var(--rule); padding: .3rem .7rem; cursor: pointer; }
+.oct button:hover, .sus:hover { border-color: var(--frost); }
+.sus[aria-pressed="true"] { color: var(--night); background: var(--lamp); border-color: var(--lamp); }
+.now { margin-left: auto; font-family: var(--display); font-size: 1.25rem; color: var(--lamp); min-height: 1.5em; min-width: 8ch; text-align: right; font-variant-numeric: tabular-nums; }
+
+.keys-wrap { overflow-x: auto; padding-bottom: 6px; }
+.keys { position: relative; height: 210px; min-width: 640px; user-select: none; -webkit-user-select: none; touch-action: none; }
+.key { position: absolute; top: 0; border: 1px solid #0a0b0b; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; font-size: .68rem; font-family: var(--text); }
+.key.white { background: linear-gradient(var(--ivory), #d4cec1); color: #6b6559; height: 100%; border-radius: 0 0 4px 4px; z-index: 1; }
+.key.black { background: linear-gradient(#26292c, var(--ebony)); color: #6f767e; height: 60%; z-index: 2; border-radius: 0 0 3px 3px; }
+.key.white.down { background: var(--ivory-down); color: var(--night); }
+.key.black.down { background: var(--ebony-down); color: var(--ivory); }
+.key.out { opacity: .55; }
+.key .k { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-size: .66rem; color: #8b8477; font-family: var(--text); }
+.key.black .k { color: #7c838b; }
+
+.fx { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.pad { font: inherit; font-family: var(--display); font-size: 1.02rem; color: var(--marble); background: var(--panel); border: 1px solid var(--rule); padding: .55rem 1rem; cursor: pointer; }
+.pad:hover { border-color: var(--frost); }
+.pad.on { border-color: var(--lamp); color: var(--lamp); }
+.help { color: var(--frost); font-size: .9rem; line-height: 1.6; max-width: 62rem; }
+.help b { font-family: var(--display); font-weight: 400; color: var(--marble); letter-spacing: .04em; }
+.credit { color: #5f6872; font-size: .78rem; line-height: 1.6; }
+
+#gate { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(8, 9, 9, .92); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+#gate[hidden] { display: none; }
+#gate .box { text-align: center; display: grid; gap: 14px; max-width: 30rem; }
+#gate h2 { font-family: var(--display); font-weight: 400; font-size: 2rem; margin: 0; }
+#gate p { color: var(--frost); font-style: italic; margin: 0; }
+#open { justify-self: center; font: inherit; font-family: var(--display); font-size: 1.3rem; color: var(--night); background: var(--lamp); border: 0; padding: .6rem 2rem; cursor: pointer; }
+@media (max-width: 560px) { .now { margin-left: 0; text-align: left; } .keys { height: 170px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kicker">The score's instruments, recorded</div>
+      <h1>Dracula's Guest Orchestra</h1>
+    </div>
+    <p class="sub">The string sections, brass, timpani and church organ the game's score is played on, with the wolves and the thunder, to play yourself.</p>
+  </header>
+
+  <div class="console">
+    <div class="ctl"><label for="dyn">Dynamic</label><input id="dyn" type="range" min="0" max="100" value="62"><output id="dynOut">mf</output></div>
+    <div class="ctl"><label for="hall">Tomb reverb</label><input id="hall" type="range" min="0" max="100" value="40"><output id="hallOut">40%</output></div>
+    <div class="ctl"><label for="rel">Release</label><input id="rel" type="range" min="5" max="400" value="80"><output id="relOut">0.8 s</output></div>
+    <div class="ctl"><span class="lbl">Octave</span><div class="oct"><button id="down" type="button" aria-label="Octave down">&minus;</button><output id="octOut">C3</output><button id="up" type="button" aria-label="Octave up">+</button></div></div>
+    <div class="ctl"><span class="lbl">Pedal</span><button id="sus" class="sus" type="button" aria-pressed="false">Sustain</button></div>
+    <div class="now" id="now" aria-live="polite"></div>
+  </div>
+
+  <div class="keys-wrap"><div class="keys" id="keys"></div></div>
+
+  <div class="choose" id="choose" aria-label="Instruments"></div>
+
+  <div class="fx" id="fx"><span class="kicker" style="margin-right:4px">Sounds</span></div>
+
+  <p class="help"><b>Play</b> with the mouse or a finger, or the computer keyboard: the bottom two rows (<b>Z S X D C</b> …) are the lower octave, the top two rows (<b>Q 2 W 3 E</b> …) the one above. <b>Shift</b> or the arrow keys move the octave. Hold <b>Space</b> for the sustain pedal. Strings, brass and organ hold as long as you hold the key; harp, spiccato and drums ring out. Pressing a second instrument while holding Ctrl (⌘ on a Mac) layers it with the first.</p>
+  <p class="credit">Instruments: VSCO 2 Community Edition by Versilian Studios (CC0); organ sampled by Simon Dalzell. Wolves: US Fish &amp; Wildlife Service (public domain). Thunder: Bidgee (CC BY 3.0) and Caesar (public domain), via Wikimedia Commons.</p>
+</div>
+
+<div id="gate"><div class="box">
+  <h2>The orchestra is tuning</h2>
+  <p>Sound can only start after you press something.</p>
+  <button id="open" type="button">Open the orchestra</button>
+</div></div>
+
+<script>
+(() => {
+  const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+  const nn = (m) => NAMES[m % 12] + (Math.floor(m / 12) - 1);
+  const DYN = [[0, 'ppp'], [12, 'pp'], [25, 'p'], [45, 'mp'], [58, 'mf'], [72, 'f'], [86, 'ff'], [96, 'fff']];
+  const LOW = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ',', 'l', '.', ';', '/'];
+  const HIGH = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i', '9', 'o', '0', 'p', '[', '=', ']'];
+
+  let ctx, master, dry, wet, manifest;
+  let base = 48;                       // the lowest key on the keyboard (C3)
+  const selected = new Set();
+  const buffers = {};                  // file -> AudioBuffer
+  const loading = {};
+  const voices = new Map();            // note id -> [voices]
+  let sustain = false;
+  const held = new Set();
+
+  const $ = (id) => document.getElementById(id);
+  const store = (k, v) => { try { v === undefined ? (v = localStorage.getItem(k)) : localStorage.setItem(k, v); } catch { v = null; } return v; };
+
+  // ---------- sound
+  function impulse(seconds, decay) {
+    const n = Math.floor(ctx.sampleRate * seconds);
+    const b = ctx.createBuffer(2, n, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = b.getChannelData(c);
+      for (let i = 0; i < n; i++) {
+        const t = i / n;
+        // a stone room: early reflections, then a long dark tail
+        const early = i < ctx.sampleRate * 0.08 && Math.random() < 0.004 ? (Math.random() * 2 - 1) * 0.8 : 0;
+        d[i] = ((Math.random() * 2 - 1) * Math.pow(1 - t, decay) + early) * (c ? 0.97 : 1);
+      }
+    }
+    return b;
+  }
+  function setupAudio() {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctx.createDynamicsCompressor();
+    master.threshold.value = -10; master.knee.value = 12; master.ratio.value = 3;
+    master.connect(ctx.destination);
+    dry = ctx.createGain(); dry.connect(master);
+    const conv = ctx.createConvolver(); conv.buffer = impulse(4.2, 3.2);
+    const tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = 5200;
+    wet = ctx.createGain(); wet.connect(conv); conv.connect(tone); tone.connect(master);
+    setHall();
+  }
+  function setHall() {
+    const v = +$('hall').value / 100;
+    $('hallOut').textContent = Math.round(v * 100) + '%';
+    if (!ctx) return;
+    dry.gain.value = 1 - v * 0.35;
+    wet.gain.value = v * 0.9;
+  }
+
+  async function loadFile(file) {
+    if (buffers[file]) return buffers[file];
+    if (!loading[file]) loading[file] = fetch(file).then((r) => { if (!r.ok) throw new Error(file); return r.arrayBuffer(); })
+      .then((a) => new Promise((res, rej) => ctx.decodeAudioData(a, res, rej))).then((b) => (buffers[file] = b));
+    return loading[file];
+  }
+  async function loadInstrument(inst) {
+    const btn = document.querySelector(`[data-inst="${inst.id}"] .state`);
+    let done = 0;
+    if (btn) btn.textContent = 'loading';
+    await Promise.all(inst.notes.map((n) => loadFile(n.file).then(() => { done++; if (btn) btn.textContent = done < inst.notes.length ? `${done}/${inst.notes.length}` : ''; })));
+  }
+
+  function nearest(inst, midi) {
+    let best = inst.notes[0];
+    for (const n of inst.notes) if (Math.abs(n.midi - midi) < Math.abs(best.midi - midi)) best = n;
+    return best;
+  }
+  function velocity() { return +$('dyn').value / 100; }
+
+  function start(midi, id) {
+    if (!ctx || !selected.size) return;
+    stop(id, true);
+    const vel = velocity();
+    const list = [];
+    for (const instId of selected) {
+      const inst = manifest.instruments.find((i) => i.id === instId);
+      const n = nearest(inst, midi);
+      const buf = buffers[n.file];
+      if (!buf) continue;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = Math.pow(2, (midi - n.midi) / 12);
+      if (n.loop && !inst.oneshot) { src.loop = true; src.loopStart = n.loop[0]; src.loopEnd = n.loop[1]; }
+      const g = ctx.createGain();
+      const level = inst.gain * (0.18 + 0.82 * vel * vel) * (selected.size > 1 ? 0.75 : 1);
+      g.gain.setValueAtTime(0, ctx.currentTime);
+      g.gain.linearRampToValueAtTime(level, ctx.currentTime + (inst.oneshot ? 0.004 : 0.03));
+      src.connect(g); g.connect(dry); g.connect(wet);
+      src.start();
+      list.push({ src, g, oneshot: inst.oneshot });
+    }
+    voices.set(id, list);
+    show();
+  }
+  function stop(id, now = false) {
+    const list = voices.get(id);
+    if (!list) return;
+    voices.delete(id);
+    const rel = now ? 0.04 : +$('rel').value / 100;
+    for (const v of list) {
+      if (v.oneshot && !now) continue;   // struck and plucked notes ring out
+      const t = ctx.currentTime;
+      v.g.gain.cancelScheduledValues(t);
+      v.g.gain.setValueAtTime(v.g.gain.value, t);
+      v.g.gain.setTargetAtTime(0, t, Math.max(0.01, rel / 3));
+      v.src.stop(t + rel * 2 + 0.1);
+    }
+  }
+  function release(midi) {
+    const id = 'n' + midi;
+    held.delete(midi);
+    keyEl(midi)?.classList.remove('down');
+    if (!sustain) stop(id);
+    show();
+  }
+  function press(midi) {
+    if (held.has(midi)) return;
+    held.add(midi);
+    keyEl(midi)?.classList.add('down');
+    start(midi, 'n' + midi);
+  }
+  function show() {
+    $('now').textContent = [...held].sort((a, b) => a - b).map(nn).join(' ');
+  }
+  function setSustain(on) {
+    sustain = on;
+    $('sus').setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (!on) for (const id of [...voices.keys()]) { const m = +id.slice(1); if (!held.has(m)) stop(id); }
+  }
+
+  // ---------- keyboard
+  const WHITE = [0, 2, 4, 5, 7, 9, 11];
+  function keyEl(midi) { return document.querySelector(`.key[data-midi="${midi}"]`); }
+  function buildKeys() {
+    const keys = $('keys');
+    keys.innerHTML = '';
+    const count = 36; // three octaves
+    const whites = [];
+    for (let m = base; m <= base + count; m++) if (WHITE.includes(m % 12)) whites.push(m);
+    const w = 100 / whites.length;
+    const label = (m) => {
+      const i = m - base;
+      return i < LOW.length ? LOW[i] : (i - 12 >= 0 && i - 12 < HIGH.length ? HIGH[i - 12] : '');
+    };
+    const ranges = [...selected].map((id) => manifest.instruments.find((i) => i.id === id).range);
+    const inRange = (m) => !ranges.length || ranges.some((r) => m >= r[0] && m <= r[1]);
+    let wi = 0;
+    for (let m = base; m <= base + count; m++) {
+      const el = document.createElement('div');
+      const white = WHITE.includes(m % 12);
+      el.className = 'key ' + (white ? 'white' : 'black') + (inRange(m) ? '' : ' out');
+      el.dataset.midi = m;
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', nn(m));
+      if (white) {
+        el.style.left = wi * w + '%';
+        el.style.width = w + '%';
+        el.textContent = m % 12 === 0 ? nn(m) : '';
+        wi++;
+      } else {
+        el.style.left = (wi * w - w * 0.32) + '%';
+        el.style.width = w * 0.64 + '%';
+      }
+      const k = label(m);
+      if (k) { const s = document.createElement('span'); s.className = 'k'; s.textContent = k.toUpperCase(); el.appendChild(s); }
+      if (held.has(m)) el.classList.add('down');
+      keys.appendChild(el);
+    }
+    $('octOut').textContent = nn(base);
+  }
+  function shift(d) {
+    for (const m of [...held]) release(m);
+    base = Math.max(24, Math.min(84, base + d * 12));
+    store('dgo-base', String(base));
+    buildKeys();
+  }
+
+  // pointer: press, glide across keys
+  const pointers = new Map();
+  function midiAt(x, y) {
+    const el = document.elementFromPoint(x, y);
+    const k = el && el.closest && el.closest('.key');
+    return k ? +k.dataset.midi : null;
+  }
+  $('keys').addEventListener('pointerdown', (e) => {
+    const m = midiAt(e.clientX, e.clientY);
+    if (m == null) return;
+    e.preventDefault();
+    $('keys').setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, m);
+    press(m);
+  });
+  $('keys').addEventListener('pointermove', (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    const m = midiAt(e.clientX, e.clientY);
+    const was = pointers.get(e.pointerId);
+    if (m != null && m !== was) { release(was); press(m); pointers.set(e.pointerId, m); }
+  });
+  const up = (e) => { if (pointers.has(e.pointerId)) { release(pointers.get(e.pointerId)); pointers.delete(e.pointerId); } };
+  $('keys').addEventListener('pointerup', up);
+  $('keys').addEventListener('pointercancel', up);
+
+  // computer keyboard
+  const down = new Map();
+  window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' && e.target.type !== 'range') return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) setSustain(true); return; }
+    if (e.key === 'ArrowLeft') { shift(-1); return; }
+    if (e.key === 'ArrowRight') { shift(1); return; }
+    if (e.key === 'Shift' && !e.repeat) { shift(e.location === 1 ? -1 : 1); return; }
+    const k = e.key.toLowerCase();
+    let i = LOW.indexOf(k);
+    let m = i >= 0 ? base + i : (HIGH.indexOf(k) >= 0 ? base + 12 + HIGH.indexOf(k) : null);
+    if (m == null || e.repeat) return;
+    e.preventDefault();
+    down.set(e.code, m);
+    press(m);
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') { setSustain(false); return; }
+    if (down.has(e.code)) { release(down.get(e.code)); down.delete(e.code); }
+  });
+  window.addEventListener('blur', () => { for (const m of [...held]) release(m); setSustain(false); });
+
+  // ---------- controls
+  function setDyn() {
+    const v = +$('dyn').value;
+    let name = 'ppp';
+    for (const [at, n] of DYN) if (v >= at) name = n;
+    $('dynOut').textContent = name;
+  }
+  $('dyn').addEventListener('input', setDyn);
+  $('hall').addEventListener('input', setHall);
+  $('rel').addEventListener('input', () => { $('relOut').textContent = (+$('rel').value / 100).toFixed(1) + ' s'; });
+  $('down').addEventListener('click', () => shift(-1));
+  $('up').addEventListener('click', () => shift(1));
+  $('sus').addEventListener('click', () => setSustain(!sustain));
+
+  async function choose(id, layer) {
+    if (layer) {
+      if (selected.has(id) && selected.size > 1) selected.delete(id); else selected.add(id);
+    } else {
+      selected.clear();
+      selected.add(id);
+    }
+    for (const b of document.querySelectorAll('.inst')) b.setAttribute('aria-pressed', selected.has(b.dataset.inst) ? 'true' : 'false');
+    store('dgo-inst', [...selected].join(','));
+    buildKeys();
+    if (ctx) await Promise.all([...selected].map((s) => loadInstrument(manifest.instruments.find((i) => i.id === s))));
+  }
+
+  function buildChooser() {
+    const fams = {};
+    for (const inst of manifest.instruments) (fams[inst.family] ||= []).push(inst);
+    const host = $('choose');
+    for (const [fam, list] of Object.entries(fams)) {
+      const fs = document.createElement('fieldset');
+      const lg = document.createElement('legend');
+      lg.textContent = fam;
+      fs.appendChild(lg);
+      for (const inst of list) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'inst';
+        b.dataset.inst = inst.id;
+        b.setAttribute('aria-pressed', 'false');
+        b.innerHTML = `<span></span><span class="state"></span>`;
+        b.firstChild.textContent = inst.name;
+        b.addEventListener('click', (e) => choose(inst.id, e.ctrlKey || e.metaKey));
+        fs.appendChild(b);
+      }
+      host.appendChild(fs);
+    }
+    for (const fx of manifest.effects) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pad';
+      b.textContent = fx.name;
+      b.addEventListener('click', async () => {
+        if (!ctx) return;
+        b.classList.add('on');
+        const buf = await loadFile(fx.file);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        const g = ctx.createGain();
+        g.gain.value = 0.9;
+        src.connect(g); g.connect(dry); g.connect(wet);
+        src.onended = () => b.classList.remove('on');
+        src.start();
+      });
+      $('fx').appendChild(b);
+    }
+  }
+
+  async function boot() {
+    manifest = await (await fetch('manifest.json')).json();
+    const savedBase = +store('dgo-base');
+    if (savedBase >= 24 && savedBase <= 84) base = savedBase;
+    buildChooser();
+    const saved = (store('dgo-inst') || '').split(',').filter((id) => manifest.instruments.some((i) => i.id === id));
+    for (const id of saved.length ? saved : ['celli']) selected.add(id);
+    for (const b of document.querySelectorAll('.inst')) b.setAttribute('aria-pressed', selected.has(b.dataset.inst) ? 'true' : 'false');
+    buildKeys();
+    setDyn();
+  }
+  $('open').addEventListener('click', async () => {
+    setupAudio();
+    $('gate').hidden = true;
+    await Promise.all([...selected].map((s) => loadInstrument(manifest.instruments.find((i) => i.id === s))));
+  });
+  boot().catch((e) => { $('gate').querySelector('p').textContent = 'The instruments could not load (' + e.message + '). Reload the page to try again.'; });
+})();
+</script>

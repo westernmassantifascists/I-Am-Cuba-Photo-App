@@ -31,6 +31,12 @@ const ROUTE := [
 ## the road north, back towards Munich
 const NORTH := Vector2(0, 318)
 const PLATEAU := 26.0
+## the extent of the land, and how far from the road a walker may stray
+const MAP_X0 := -160.0
+const MAP_X1 := 160.0
+const MAP_Z0 := -300.0
+const MAP_Z1 := 370.0
+const ROAM := 60.0
 ## Munich is not on the map: it is a small lit table in the dark, a still life far above the valley.
 const MUNICH := Vector3(0, 400, 900)
 
@@ -381,6 +387,7 @@ func _open_door() -> void:
 # ================================================================== feelings → world, every frame
 
 func _process(delta: float) -> void:
+	_keep_on_land()
 	# cold creeps in once you are walking alone; faster when you stand still, and in the storm
 	if player and player.enabled and _walked_out:
 		var rate := 0.18
@@ -525,6 +532,52 @@ func _build_environment() -> void:
 
 # ---- terrain: a road down from the plateau into a valley, hills on either side
 
+## The nearest point of the road (including the plateau road north) to p.
+func _road_nearest(p: Vector2) -> Vector2:
+	var best := INF
+	var at := p
+	var pts: Array = []
+	for r in ROUTE:
+		pts.append(r[1])
+	var segs: Array = []
+	for i in pts.size() - 1:
+		segs.append([pts[i], pts[i + 1]])
+	segs.append([pts[0], NORTH])
+	for sg in segs:
+		var a: Vector2 = sg[0]
+		var ab: Vector2 = sg[1] - a
+		var q := a + ab * clampf((p - a).dot(ab) / ab.length_squared(), 0.0, 1.0)
+		var d := p.distance_to(q)
+		if d < best:
+			best = d
+			at = q
+	return at
+
+
+## A walker can wander off the road, but not out of the valley: past ROAM metres the hills turn
+## them back; and anyone who somehow falls through the world is set down on the road again.
+func _keep_on_land() -> void:
+	if player == null or not player.enabled:
+		return
+	var pos := player.global_position
+	var p := Vector2(pos.x, pos.z)
+	var near := _road_nearest(p)
+	var d := p.distance_to(near)
+	var inside := Vector2(clampf(p.x, MAP_X0 + 50.0, MAP_X1 - 50.0), clampf(p.y, MAP_Z0 + 50.0, MAP_Z1 - 50.0))
+	if d > ROAM or inside != p:
+		var to := near + (p - near).normalized() * minf(d, ROAM - 0.5) if d > 0.01 else near
+		to = Vector2(clampf(to.x, MAP_X0 + 50.0, MAP_X1 - 50.0), clampf(to.y, MAP_Z0 + 50.0, MAP_Z1 - 50.0))
+		player.global_position = Vector3(to.x, maxf(pos.y, height_at(to.x, to.y) + 0.1), to.y)
+		player.velocity.x = 0.0
+		player.velocity.z = 0.0
+	var ground := height_at(player.global_position.x, player.global_position.z)
+	if player.global_position.y < ground - 4.0 or player.global_position.y < -50.0:
+		var safe := _road_nearest(Vector2(player.global_position.x, player.global_position.z))
+		player.global_position = Vector3(safe.x, height_at(safe.x, safe.y) + 0.5, safe.y)
+		player.velocity = Vector3.ZERO
+		ui.dip(1.0)
+
+
 func _road_info(p: Vector2) -> Vector2:
 	# returns (distance to the road, road height at the nearest point)
 	var best := INF
@@ -561,6 +614,9 @@ func height_at(x: float, z: float) -> float:
 	var hills := noise.get_noise_2d(x, z) * lerpf(3.0, 9.0, valley) * smoothstep(4.0, 24.0, d)
 	var swell := noise.get_noise_2d(x * 0.25 + 400.0, z * 0.25) * 10.0 * smoothstep(20.0, 60.0, d)
 	var h := info.y + minf(side, 60.0) + hills + swell
+	# the world ends in mountains, never in sky: the land climbs steeply towards the map's edges
+	var edge := minf(minf(x - MAP_X0, MAP_X1 - x), minf(z - MAP_Z0, MAP_Z1 - z))
+	h += pow(1.0 - smoothstep(0.0, 45.0, edge), 1.6) * 70.0
 	# flat places: the village green, the churchyard
 	for flat in [[ROUTE[8][1], 28.0, ROUTE[8][2]], [ROUTE[11][1], 32.0, ROUTE[11][2]]]:
 		var f := 1.0 - smoothstep(flat[1] * 0.6, flat[1], p.distance_to(flat[0]))
@@ -569,10 +625,10 @@ func height_at(x: float, z: float) -> float:
 
 
 func _build_terrain() -> void:
-	var x0 := -160.0
-	var x1 := 160.0
-	var z0 := -300.0
-	var z1 := 370.0
+	var x0 := MAP_X0
+	var x1 := MAP_X1
+	var z0 := MAP_Z0
+	var z1 := MAP_Z1
 	var step := 3.0
 	var nx := int((x1 - x0) / step) + 1
 	var nz := int((z1 - z0) / step) + 1

@@ -1,0 +1,258 @@
+:: StoryData
+{
+  "start": "The Quatre Saisons"
+}
+
+:: StoryInit
+/* ------------------------------------------------------------------------------------------
+   DRACULA'S GUEST — Bram Stoker (1914, public domain), abridged in his own words.
+
+   Built with Darkroom's story format; the Godot game reads the compiled story.json.
+   Feelings (darkroom.json "meters"): dread, cold, defiance.
+     cold also rises on its own as you walk, faster in the storm.
+   Tags tie a passage to the world:
+     at-<station>        the place in the level where it happens
+     music-<bed>         the music bed (bed_munich, bed_valley, ... rendered by the groovebox)
+     atmosphere-<sky>    weather and sky: noon, afternoon, evening, dusk, snow, storm, moon, dawn
+     look-<grade>        colour grading of the world
+     drift-road feel-*   roadside moments: the one that fits your feelings comes next
+   [[Walk on->@walk]] closes the text and gives you back the road.
+   ------------------------------------------------------------------------------------------ */
+@set $askedJohann = false
+@set $sawStranger = false
+@set $readTomb = false
+@set $snowing = false
+
+:: The Quatre Saisons [at-courtyard music-munich atmosphere-noon look-warm]
+@card "Dracula's Guest" kicker="Bram Stoker"
+When we started for our drive the sun was shining brightly on Munich, and the air was full of the joyousness of early summer.
+
+Just as we were about to depart, Herr Delbrück, the maître d'hôtel of the Quatre Saisons, came down bareheaded to the carriage and said to the coachman, "Remember you are back by nightfall. The sky looks bright but there is a shiver in the north wind that says there may be a sudden storm." Here he smiled and added, "for you know what night it is."
+
+[[Ask Johann what night it is->Walpurgis Nacht][defiance+5]]
+[[Sink back in the carriage and say nothing->The Drive][dread+5]]
+
+:: Walpurgis Nacht [at-courtyard music-munich atmosphere-noon]
+"Tell me, Johann, what is tonight?"
+
+He crossed himself, as he answered laconically: "Walpurgis nacht." Then he took out his watch, a great, old-fashioned German silver thing as big as a turnip, and looked at it, with his eyebrows gathered together.
+
+@set $askedJohann = true
+[[Drive on->The Drive]]
+
+:: The Drive [at-courtyard music-munich atmosphere-afternoon]
+@video departure
+He started off rapidly, as if to make up for lost time. Every now and then the horses seemed to throw up their heads and sniff the air suspiciously.
+
+The road was pretty bleak, for we were traversing a sort of high windswept plateau. As we drove, I saw a road that looked but little used and which seemed to dip through a little winding valley.
+
+@goto The Crossroads
+
+:: The Crossroads [at-crossroads music-valley atmosphere-afternoon look-warm]
+It looked so inviting that, even at the risk of offending him, I called Johann to stop. He made all sorts of excuses and frequently crossed himself as he spoke.
+
+He seemed to throw himself off the box, so quickly did he reach the ground. He stretched out his hands appealingly to me and implored me not to go.
+
+[[Ask him why he will not go->Buried Him][dread+10]]
+[[Tell him you will go down the road alone->Go Home, Johann][defiance+15]]
+
+:: Buried Him [at-crossroads music-valley atmosphere-afternoon]
+He crossed himself, pointed to the spot we had left, and said, first in German, then in English, "Buried him—him what killed themselves."
+
+Whilst we were talking, we heard a sort of sound between a yelp and a bark. It was far away; but the horses got very restless. He was pale and said, "It sounds like a wolf—but yet there are no wolves here now."
+
+"Long, long," he answered, "in the spring and summer; but with the snow the wolves have been here not so long."
+
+@set $askedJohann = true
+[[Ask about the place where the road leads->It Is Unholy][dread+10]]
+[[Laugh at him->Go Home, Johann][defiance+10]]
+
+:: It Is Unholy [at-crossroads music-valley atmosphere-evening look-cold]
+"It is unholy." "What is unholy?" I enquired. "The village." "Then there is a village?" "No, no. No one lives there hundreds of years."
+
+Long ago, men had died there and been buried in their graves; but sounds were heard under the clay, and when the graves were opened, men and women were found rosy with life and their mouths red with blood.
+
+Finally, in an agony of desperation, he cried, "Walpurgis nacht!" and pointed to the carriage for me to get in.
+
+[[Get back in the carriage->Not Yet][dread+10]]
+[[Go home, Johann. I shall return alone.->Go Home, Johann][defiance+20]]
+
+:: Not Yet [at-crossroads music-valley atmosphere-evening]
+I put my foot on the step. Then I thought of the road dipping into the valley, and of how I would tell it afterwards at the Quatre Saisons: that I had turned back because a coachman was afraid of the dark.
+
+I took from the seat my oak walking stick, which I always carry on my holiday excursions, and closed the door.
+
+[[Go home, Johann->Go Home, Johann][defiance+5]]
+
+:: Go Home, Johann [at-crossroads music-valley atmosphere-evening]
+"You are afraid, Johann—you are afraid. Go home, I shall return alone, the walk will do me good." I pointed back to Munich, and said, "Go home, Johann—Walpurgis nacht doesn't concern Englishmen."
+
+With a despairing gesture, Johann turned his horses towards Munich. He went slowly along the road for a while, then there came over the crest of the hill a man tall and thin. When he drew near the horses, they began to jump and kick about, then to scream with terror. They bolted down the road. I looked for the stranger; but I found that he, too, was gone.
+
+@set $sawStranger = true
+@nudge dread+5
+[[Turn down the road into the valley->@walk]]
+
+/* ---------------- the road: drifting moments, chosen by how you feel ---------------- */
+
+:: Desolation [drift-road feel-dread at-wayside]
+I daresay I tramped for a couple of hours without seeing a person or a house. So far as the place was concerned, it was desolation itself.
+
+But I did not notice this till, on turning a bend in the road, I came upon a scattered fringe of wood; then I recognized that I had been impressed unconsciously by the desolation of the region through which I had passed.
+
+[[Walk on->@walk][dread+10]]
+
+:: A Sighing Sound [drift-road feel-cold at-wayside]
+I sat down to rest myself. It struck me that it was considerably colder than it had been at the commencement of my walk—a sort of sighing sound seemed to be around me with, now and then, high overhead, a sort of muffled roar.
+
+Great thick clouds were drifting rapidly across the sky from north to south at a great height.
+
+[[Get up and walk, to warm yourself->@walk][cold+5 defiance+5]]
+[[Sit a little longer->@walk][cold+15]]
+
+:: A Charm of Beauty [drift-road feel-defiance at-wayside]
+The ground I passed over was now much more picturesque. There were no striking objects that the eye might single out, but in all there was a charm of beauty.
+
+I took little heed of time. I had said I would see the deserted village, so on I went.
+
+[[On to the village->@walk][defiance+10]]
+
+:: That Mysterious Cry [drift-road feel-dread feel-cold at-wayside]
+The air was cold, and the drifting of clouds high overhead was more marked. They were accompanied by a sort of far away rushing sound, through which seemed to come at intervals that mysterious cry which the driver had said came from a wolf.
+
+For a while I hesitated.
+
+[[Go on all the same->@walk][defiance+10 dread+5]]
+[[Look back the way you came->@walk][dread+15]]
+
+:: The Old Foundations [drift-road feel-defiance feel-dread at-wayside]
+@when $sawStranger
+Among the grass there were old foundations, square and low, the stones of houses long since pulled down or fallen. Nettles grew where hearths had been.
+
+I thought of the tall, thin man on the crest of the hill, and of how the horses had screamed.
+
+[[Walk on->@walk][dread+10]]
+
+/* ---------------- threshold turns: they break in when a feeling crosses its line ---------------- */
+
+:: The Snow Begins [music-storm atmosphere-snow look-cold]
+@turn $cold >= 45
+@video snowfall
+As I looked there came a cold shiver in the air, and the snow began to fall. I thought of the miles and miles of bleak country I had passed.
+
+Darker and darker grew the sky, and faster and heavier fell the snow, till the earth before and around me was a glistening white carpet the further edge of which was lost in misty vagueness.
+
+@set $snowing = true
+[[Hurry on to the shelter of the wood->@resume][cold+5]]
+
+:: The Howl [atmosphere-storm look-cold]
+@turn $dread >= 55
+Every now and then the heavens were torn asunder by vivid lightning. At such moments the weird sound of the wolf appeared to be echoed by many similar sounds around me.
+
+[[Walk on->@resume][dread+5]]
+
+/* ---------------- the deserted village and the tomb ---------------- */
+
+:: The Deserted Village [at-village music-village atmosphere-dusk look-cold]
+It appeared to me that, amongst so many old foundations as I had passed, there might be still standing a house in which, though in ruins, I could find some sort of shelter for a while.
+
+@if $snowing
+@atmosphere snow
+The houses had no doors. Snow lay inside them as it lay outside.
+@else
+The houses had no doors. The wind went through them as if they were not there, and it was very cold.
+@nudge cold+30
+@endif
+
+[[Look for shelter->@walk][cold+5]]
+
+:: The Cypress Alley [at-gate music-tomb atmosphere-storm look-moon]
+As I skirted the edge of the copse, I found that a low wall encircled it, and following this I presently found an opening. Here the cypresses formed an alley leading up to a square mass of some kind of building.
+
+Just as I caught sight of this, however, the drifting clouds obscured the moon, and I passed up the path in darkness.
+
+[[Grope your way on->@walk][dread+10 cold+5]]
+
+:: The Tomb [at-tomb music-tomb atmosphere-moon look-moon]
+I stopped, for there was a sudden stillness. The moonlight broke through the clouds showing me that I was in a graveyard and that the square object before me was a great massive tomb of marble, as white as the snow that lay on and all around it.
+
+I walked around it and read, over the Doric door, in German—
+
+<div class="inscription">COUNTESS DOLINGEN OF GRATZ<br>IN STYRIA<br>SOUGHT AND FOUND DEATH<br>1801</div>
+
+On the top of the tomb, seemingly driven through the solid marble, was a great iron spike or stake. On going to the back I saw, graven in great Russian letters: *"The dead travel fast."*
+
+@set $readTomb = true
+@nudge dread+5
+[[This was Walpurgis Night->Walpurgis Night]]
+
+:: Walpurgis Night [at-tomb music-tomb atmosphere-storm look-moon]
+Walpurgis Night was when, according to the belief of millions of people, the devil was abroad—when the graves were opened and the dead came forth and walked.
+
+This very place the driver had specially shunned. This was the depopulated village of centuries ago. This was where the suicide lay; and this was the place where I was alone—unmanned, shivering with cold in a shroud of snow with a wild storm gathering again upon me!
+
+@if $defiance >= $dread
+It took all my philosophy, all the religion I had been taught, all my courage, not to collapse in a paroxysm of fright. But I did not collapse.
+@else
+I began to wish, for the first time, that I had taken Johann's advice.
+@endif
+
+[[Steel yourself: you are not a child, to be frightened of a grave->The Hail][defiance+20]]
+[[Wish, for the first time, that you had listened to Johann->The Hail][dread+15]]
+[[Huddle into your coat against the marble->The Hail][cold+15]]
+
+:: The Hail [at-tomb music-storm atmosphere-hail look-moon]
+@sfx music/sfx_thunder
+And now a perfect tornado burst upon me. The ground shook as though thousands of horses thundered across it; and this time the storm bore on its icy wings, not snow, but great hailstones.
+
+I sought the only spot that seemed to afford refuge, the deep Doric doorway of the marble tomb. As I leaned against the door, it moved slightly and opened inwards.
+
+[[Look into the tomb->The Bier][dread+10]]
+
+:: The Bier [at-tomb music-tomb atmosphere-hail look-flash]
+@fx flash
+@video apparition
+There came a flash of forked lightning that lit up the whole expanse of the heavens. In the instant, as I am a living man, I saw a beautiful woman with rounded cheeks and red lips, seemingly sleeping on a bier.
+
+As the thunder broke overhead, I was grasped as by the hand of a giant and hurled out into the storm.
+
+@sfx music/sfx_thunder
+Another blinding flash seemed to strike the iron stake that surmounted the tomb, blasting and crumbling the marble. The dead woman rose for a moment of agony while she was lapped in the flame, and her bitter scream of pain was drowned in the thundercrash.
+
+[[…->The Wolf]]
+
+:: The Wolf [at-tomb music-tomb atmosphere-moon look-dark]
+@fx fadeout time=3
+@sfx music/sfx_howl
+A vast stillness enveloped me, as though all the world were asleep or dead—only broken by the low panting as of some animal close to me.
+
+I felt a warm rasping at my throat. Some great animal was lying on me and now licking my throat. Through my eyelashes I saw above me the two great flaming eyes of a gigantic wolf.
+
+[[Lie still, and feign sleep->Holloa][dread+15]]
+[[Try to rise and fight it->Holloa][defiance+20]]
+[[Let the warmth of it keep you->Holloa][cold+15]]
+
+:: Holloa [at-tomb music-dawn atmosphere-dawn look-dawn]
+@fx fadein time=4
+Then seemingly very far away, I heard a "Holloa! holloa!" as of many voices calling in unison. A red glare began to move round the grove of cypresses. Then all at once from beyond the trees there came at a trot a troop of horsemen bearing torches.
+
+"A wolf—and yet not a wolf!" another put in shudderingly. "There was blood on the broken marble," another said after a pause, "the lightning never brought that there. Look at his throat! The wolf has been lying on him and keeping his blood warm."
+
+[[Ride back to Munich->The Telegram]]
+
+:: The Telegram [at-tomb music-dawn atmosphere-dawn look-dawn]
+@card "The Quatre Saisons" kicker="Morning"
+When we arrived, Herr Delbrück rushed so quickly down the steps to meet me, that it was apparent he had been watching within. "I had this telegram from the Boyar whose guest you are," and he took from his pocket a telegram which he handed to me, and I read:
+
+<div class="telegram">Bistritz. Be careful of my guest—his safety is most precious to me. Should aught happen to him, or if he be missed, spare nothing to find him and ensure his safety. He is English and therefore adventurous. There are often dangers from snow and wolves and night. Lose not a moment if you suspect harm to him. I answer your zeal with my fortune. —Dracula.</div>
+
+@if dominant() is "dread"
+As I held the telegram in my hand, the room seemed to whirl around me. There grew on me a sense of my being in some way the sport of opposite forces—the mere vague idea of which seemed in a way to paralyze me.
+@ending forces "The Sport of Opposite Forces"
+@elseif dominant() is "cold"
+From a distant country had come, in the very nick of time, a message that took me out of the danger of the snow sleep and the jaws of the wolf. I could not get warm all that day.
+@ending snowsleep "The Snow Sleep"
+@else
+*He is English and therefore adventurous.* I read it twice. I was certainly under some form of mysterious protection; and the next week I took the train for Bistritz.
+@ending adventurous "Therefore Adventurous"
+@endif

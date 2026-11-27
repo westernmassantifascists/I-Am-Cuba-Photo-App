@@ -10,7 +10,7 @@ import path from 'node:path';
 export const TYPES = {
   image: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'svg'],
   audio: ['mp3', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'wav', 'flac', 'aif', 'aiff'],
-  video: ['mp4', 'm4v', 'mov', 'webm'],
+  video: ['mp4', 'm4v', 'mov', 'webm', 'ogv'],
   font: ['woff', 'woff2', 'ttf', 'otf'],
 };
 
@@ -27,9 +27,9 @@ export const KINDS = {
   image: { dirs: ['images', 'sprites', 'bg'], types: ['image'] },
   music: { dirs: ['music', 'audio'], types: ['audio'] },
   ambience: { dirs: ['ambience', 'sfx', 'music', 'audio'], types: ['audio'] },
-  sfx: { dirs: ['sfx', 'audio'], types: ['audio'] },
+  sfx: { dirs: ['sfx', 'audio', 'music'], types: ['audio'] },
   voice: { dirs: ['voice', 'audio'], types: ['audio'] },
-  video: { dirs: ['video', 'videos'], types: ['video'] },
+  video: { dirs: ['video', 'videos', 'film'], types: ['video'] },
   any: { dirs: [], types: ['image', 'audio', 'video', 'font', 'other'] },
 };
 

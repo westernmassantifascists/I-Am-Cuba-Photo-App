@@ -1,0 +1,10 @@
+# downloaded and generated media (recreate with tools/fetch.mjs and tools/render-music.mjs)
+godot/assets/scans/
+godot/assets/textures/
+godot/assets/sky/
+godot/assets/film/
+godot/assets/music/
+.cache/
+# Godot's import cache
+godot/.godot/
+*.import

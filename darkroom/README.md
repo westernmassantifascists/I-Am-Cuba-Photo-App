@@ -62,6 +62,7 @@ write with the moods your material gives you. `story/low-tide.twee` explains its
 | `darkroom package` | lean build + itch.io check + `release/*.zip` |
 | `darkroom preview` | play the built `dist/` folder locally |
 | `darkroom size` | which folders and files take the most space |
+| `darkroom groove <score.json> [folder]` | render a score on the groovebox (synths, drum machine, step sequencer) into music loops that stay in sync |
 | `darkroom import <twine file or folder> <project>` | bring in an existing Twine story's text (see the end of this guide) |
 
 ## A project
@@ -296,6 +297,23 @@ You catch the last bus out.
 
 Endings are remembered across playthroughs and listed under Endings. `runs()` is the number of
 finished playthroughs, e.g. to change the opening on a second visit.
+
+## Making music: the groovebox
+
+`darkroom groove score.json assets/music` renders a score into loops. Instruments are synth voices
+(`pad`, `pluck`, `fm` bells and glass, `noise` wind, `howl`, `thunder`) and drums (`kick`, `snare`,
+`hat`, `tom`); each stem is a set of tracks playing step patterns:
+
+```json
+"bed_valley": { "tracks": [
+  { "inst": "pad",  "steps": 2,  "reverb": 0.45, "pattern": "D3+F3+A3 - | Bb2+D3+F3 - | C3+E3+G3 - | D3+F3+A3 -" },
+  { "inst": "kick", "steps": 16, "pattern": "x . . x . . . . . . . . . . . ." }
+] }
+```
+
+One token per step: a note (`D3`, `F#4`), a chord (`D3+F3+A3`), `x`/`X` for a drum hit, `-` to hold,
+`.` for a rest (`|` is only for reading). Stems of the same length and tempo stay in sync, so a piece
+can play them together and fade them by mood and by feeling. `"loudness": -21` levels every loop the same.
 
 ## Appearance
 

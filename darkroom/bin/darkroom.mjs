@@ -11,6 +11,7 @@ import { printReport, mb, red, green, yellow, bold, dim, loadConfig } from '../l
 import { syncLibrary, loadLibrary, motifIndex } from '../lib/library.mjs';
 import { indexAssets, resolveAsset } from '../lib/assets.mjs';
 import { develop } from '../lib/develop.mjs';
+import { renderScore } from '../lib/groovebox.mjs';
 import { hasFfmpeg } from '../lib/lean.mjs';
 
 const HELP = `
@@ -27,6 +28,8 @@ ${bold('darkroom')} — photo visual novels from Twine stories, ready for itch.i
   darkroom size [project]                  where the megabytes go
   darkroom develop [project]               develop the piece's moods from its own pictures and sounds
   darkroom library [project] [--prune]     add new photos/videos to library.json, list motifs
+  darkroom groove <score.json> [out folder] [--format=ogg|mp3|m4a|wav]
+                                           render a groovebox score into synced music loops
 
   [project] defaults to the current folder. Add --verbose for full lists.
 `;
@@ -127,6 +130,16 @@ async function main() {
       if (d.palette) console.log(bold('Palette') + `  background ${d.palette.bg}  text ${d.palette.text}  accent ${d.palette.accent}`);
       console.log(`\nWrote moods.json and ${bold('moodboard.html')} (open it in a browser).`);
       console.log(dim('Use them as tags: look-<mood> atmosphere-<mood> motif-<mood or quality> music-<mood> sound-<mood>.'));
+      return;
+    }
+    case 'groove': {
+      if (!pos[0]) throw new Error('usage: darkroom groove <score.json> [out folder]');
+      const out = path.resolve(pos[1] || 'assets/music');
+      renderScore(path.resolve(pos[0]), out, {
+        format: flags.format || 'm4a',
+        onStem: (name, sec, ms) => console.log(`${name.padEnd(18)} ${sec.toFixed(1)}s  ${dim(`${ms} ms`)}`),
+      });
+      console.log(green(`Rendered into ${path.relative(process.cwd(), out) || '.'}`));
       return;
     }
     case 'library': {

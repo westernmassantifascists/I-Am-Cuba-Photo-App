@@ -77,6 +77,8 @@ const LINK_RE = /\[\[(.+?)\]\]/g;
 export function parseSpecial(target) {
   const t = target.trim();
   if (t === '@resume') return { kind: 'resume' };
+  // @walk: close the text and hand control back to the world (engines with a world, e.g. Godot)
+  if (t === '@walk') return { kind: 'walk' };
   const m = t.match(/^@drift\s+(\S+)(?:\s+else\s*=\s*(.+))?$/);
   if (m) return { kind: 'drift', pool: m[1], else: m[2] ? m[2].trim().replace(/^(["'])(.*)\1$/, '$2') : null };
   if (t.startsWith('@')) return { kind: 'bad' };
@@ -168,7 +170,8 @@ export function compileStory({ passages, startName, config, assetIndex, library 
     if (!sp) continue;
     r.special = true;
     const ps = out.passages[r.from];
-    if (sp.kind === 'bad') errors.push({ file: r.file, line: r.line, passage: r.from, msg: `"${r.target}" is not a known target (use @drift <pool> or @resume)` });
+    if (sp.kind === 'walk') continue;
+    if (sp.kind === 'bad') errors.push({ file: r.file, line: r.line, passage: r.from, msg: `"${r.target}" is not a known target (use @drift <pool>, @resume or @walk)` });
     if (sp.kind === 'resume' && !out.turns.length) warnings.push({ file: r.file, line: r.line, passage: r.from, msg: '@resume is only meaningful in a passage with @turn' });
     if (sp.kind === 'drift') {
       if (!out.pools[sp.pool]) errors.push({ file: r.file, line: r.line, passage: r.from, msg: `@drift ${sp.pool}: no passages are tagged drift-${sp.pool}` });
@@ -190,8 +193,10 @@ export function compileStory({ passages, startName, config, assetIndex, library 
 
   // reachability
   const reach = new Set();
-  // Threshold turns can happen from anywhere, so they count as reachable.
-  const queue = [start, 'StoryInit', ...out.turns.map((t) => t.passage)].filter((n) => out.passages[n]);
+  // Threshold turns can happen from anywhere, and passages placed in a game world (at-<place>
+  // tags) are reached by walking there, so both count as reachable.
+  const placed = Object.entries(out.passages).filter(([, ps]) => ps.tags.some((t) => t.startsWith('at-'))).map(([n]) => n);
+  const queue = [start, 'StoryInit', ...out.turns.map((t) => t.passage), ...placed].filter((n) => out.passages[n]);
   while (queue.length) {
     const n = queue.shift();
     if (reach.has(n)) continue;

@@ -1,0 +1,65 @@
+{
+  "note": "Everything the game downloads. tools/fetch.mjs reads this, downloads into godot/assets/ and writes CREDITS.md. All 3D scans, textures and skies are CC0 from Poly Haven; the film is public domain from Wikimedia Commons; the text is Bram Stoker's (1914, public domain).",
+  "resolution": "1k",
+  "scans": [
+    { "id": "gothic_statue", "use": "the Countess's tomb statue" },
+    { "id": "rock_moss_set_01", "use": "mossy rocks by the road" },
+    { "id": "rock_moss_set_02", "use": "mossy rocks by the road" },
+    { "id": "boulder_01", "use": "the valley" },
+    { "id": "rock_07", "use": "the valley" },
+    { "id": "rock_09", "use": "the valley" },
+    { "id": "stone_01", "use": "scattered stones" },
+    { "id": "tree_stump_01", "use": "felled wood near the village" },
+    { "id": "tree_stump_02", "use": "felled wood near the village" },
+    { "id": "dead_tree_trunk", "use": "fallen trees" },
+    { "id": "dead_tree_trunk_02", "use": "fallen trees" },
+    { "id": "root_cluster_02", "use": "the hollow" },
+    { "id": "pine_roots", "use": "the wood" },
+    { "id": "dry_branches_medium_01", "use": "branches on the road" },
+    { "id": "fir_sapling", "use": "young firs on the slopes" },
+    { "id": "moss_01", "use": "ground cover" },
+    { "id": "fern_02", "use": "ground cover" },
+    { "id": "nettle_plant", "use": "the deserted village" }
+  ],
+  "textures": [
+    { "id": "marble_01", "use": "the tomb" },
+    { "id": "medieval_blocks_02", "use": "tomb plinth and steps" },
+    { "id": "mossy_stone_wall", "use": "churchyard wall" },
+    { "id": "worn_mossy_plasterwall", "use": "houses of the deserted village" },
+    { "id": "roof_slates_02", "use": "village roofs" },
+    { "id": "weathered_planks", "use": "doors, shutters, the carriage" },
+    { "id": "stony_dirt_path", "use": "the road" },
+    { "id": "forest_leaves_02", "use": "spring ground" },
+    { "id": "snow_02", "use": "snow" },
+    { "id": "rock_wall_08", "use": "the valley sides" },
+    { "id": "cobblestone_floor_01", "use": "the courtyard of the Quatre Saisons" }
+  ],
+  "skies": [
+    { "id": "kloppenheim_05_puresky", "use": "noon: the drive out of Munich" },
+    { "id": "kloppenheim_03_puresky", "use": "afternoon: the crossroads" },
+    { "id": "kloppenheim_06_puresky", "use": "evening: the valley" },
+    { "id": "kloppenheim_01_puresky", "use": "dusk: the deserted village" },
+    { "id": "snow_field_2_puresky", "use": "the snowstorm" },
+    { "id": "kloppenheim_07_puresky", "use": "storm night: the tomb" },
+    { "id": "kloppenheim_02_puresky", "use": "clear night: after the storm" }
+  ],
+  "films": [
+    {
+      "file": "Early English Traffic, Turn of the Century London (1896-1903).webm",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/6/63/Early_English_Traffic%2C_Turn_of_the_Century_London_%281896-1903%29.webm",
+      "credit": "British Pathé, 1896–1903. Public domain (Wikimedia Commons).",
+      "clips": [
+        { "id": "departure", "start": 32, "duration": 14, "use": "the carriage leaves the city" }
+      ]
+    },
+    {
+      "file": "Le Chevalier des Neiges (1913).webm",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c0/Le_Chevalier_des_Neiges_%281913%29.webm",
+      "credit": "Georges Méliès, Le Chevalier des Neiges, 1913. Public domain (Wikimedia Commons).",
+      "clips": [
+        { "id": "snowfall", "start": 120, "duration": 12, "use": "the storm closes in" },
+        { "id": "apparition", "start": 600, "duration": 10, "use": "the lightning: the woman on the bier" }
+      ]
+    }
+  ]
+}

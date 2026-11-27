@@ -1,0 +1,32 @@
+{
+  "title": "Dracula's Guest",
+  "id": "draculas-guest",
+  "author": "Bram Stoker (1914), adapted",
+  "start": "The Quatre Saisons",
+  "mode": "page",
+  "beat": "paragraph",
+  "meters": {
+    "dread": { "start": 5, "min": 0, "max": 100 },
+    "cold": { "start": 0, "min": 0, "max": 100 },
+    "defiance": { "start": 10, "min": 0, "max": 100 }
+  },
+  "scene": {
+    "music": {
+      "munich": "music/bed_munich",
+      "valley": "music/bed_valley",
+      "village": "music/bed_village",
+      "storm": "music/bed_storm",
+      "tomb": "music/bed_tomb",
+      "dawn": "music/bed_dawn",
+      "silence": null
+    },
+    "looks": {
+      "warm": { "opacity": 1, "filter": "" },
+      "cold": { "opacity": 1, "filter": "" },
+      "moon": { "opacity": 1, "filter": "" },
+      "flash": { "opacity": 1, "filter": "" },
+      "dark": { "opacity": 1, "filter": "" },
+      "dawn": { "opacity": 1, "filter": "" }
+    }
+  }
+}

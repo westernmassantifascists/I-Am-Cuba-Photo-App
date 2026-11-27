@@ -8,3 +8,5 @@ godot/assets/music/
 # Godot's import cache
 godot/.godot/
 *.import
+.darkroom/
+look-board.html

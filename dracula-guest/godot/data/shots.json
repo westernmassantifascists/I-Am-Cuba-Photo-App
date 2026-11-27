@@ -1,0 +1,388 @@
+{
+ "note": "Composed shots for the story's passages. anchor: a named place in the world (main.gd: anchors). pos / look: metres from the anchor (x east, y up, z south); look_anchor: aim at another anchor. fov: lens in degrees. move: where the camera drifts over 30 s. side: where the text is set. 'wayside' is the shot for any roadside moment; 'here_sky' and 'here_low' frame a threshold turn wherever the player is. show: things that appear only in this shot. open: the tomb door stands open. use: borrow another shot.",
+ "shots": {
+  "The Quatre Saisons": {
+   "anchor": "munich",
+   "pos": [
+    0.9,
+    0.3,
+    1.5
+   ],
+   "look": [
+    0,
+    0.22,
+    0
+   ],
+   "fov": 28,
+   "move": [
+    -0.2,
+    0,
+    -0.25
+   ],
+   "side": "left"
+  },
+  "Walpurgis Nacht": {
+   "anchor": "munich",
+   "pos": [
+    -0.9,
+    0.38,
+    1.2
+   ],
+   "look": [
+    -0.15,
+    0.15,
+    0.05
+   ],
+   "fov": 32,
+   "move": [
+    0.12,
+    -0.05,
+    -0.12
+   ],
+   "side": "right",
+   "show": [
+    "card"
+   ]
+  },
+  "The Drive": {
+   "anchor": "munich",
+   "pos": [
+    0,
+    0.25,
+    2.2
+   ],
+   "look": [
+    0,
+    0.22,
+    0
+   ],
+   "fov": 26,
+   "move": [
+    0,
+    0,
+    -0.8
+   ],
+   "side": "left"
+  },
+  "The Crossroads": {
+   "anchor": "cross",
+   "pos": [
+    -2.6,
+    0.3,
+    4.6
+   ],
+   "look": [
+    0,
+    1.7,
+    0
+   ],
+   "fov": 36,
+   "move": [
+    0.6,
+    0.1,
+    -0.8
+   ],
+   "side": "right"
+  },
+  "Buried Him": {
+   "anchor": "cross",
+   "pos": [
+    1.3,
+    0.55,
+    1.7
+   ],
+   "look": [
+    0,
+    0.3,
+    0
+   ],
+   "fov": 34,
+   "move": [
+    -0.3,
+    0,
+    -0.2
+   ],
+   "side": "left"
+  },
+  "It Is Unholy": {
+   "anchor": "crossroads",
+   "pos": [
+    0,
+    1.3,
+    3
+   ],
+   "look_anchor": "wayside_1",
+   "look": [
+    0,
+    1,
+    0
+   ],
+   "fov": 28,
+   "move": [
+    0,
+    0,
+    -1.5
+   ],
+   "side": "left"
+  },
+  "Not Yet": {
+   "anchor": "crossroads",
+   "pos": [
+    2,
+    1.6,
+    -1
+   ],
+   "look_anchor": "crest",
+   "look": [
+    0,
+    1.2,
+    0
+   ],
+   "fov": 34,
+   "move": [
+    0,
+    0,
+    0.6
+   ],
+   "side": "right"
+  },
+  "Go Home, Johann": {
+   "anchor": "crossroads",
+   "pos": [
+    0.5,
+    1.45,
+    -1.5
+   ],
+   "look_anchor": "crest",
+   "look": [
+    0,
+    1.4,
+    0
+   ],
+   "fov": 12,
+   "move": [
+    0,
+    0,
+    0
+   ],
+   "side": "left",
+   "show": [
+    "figure"
+   ]
+  },
+  "wayside": {
+   "side": "right",
+   "fov": 42
+  },
+  "here_sky": {
+   "side": "left",
+   "fov": 55
+  },
+  "here_low": {
+   "side": "right",
+   "fov": 34
+  },
+  "The Deserted Village": {
+   "anchor": "village",
+   "pos": [
+    2,
+    1.3,
+    19
+   ],
+   "look_anchor": "tower",
+   "look": [
+    0,
+    3,
+    0
+   ],
+   "fov": 34,
+   "move": [
+    0,
+    0,
+    -2.5
+   ],
+   "side": "right"
+  },
+  "The Cypress Alley": {
+   "anchor": "gate",
+   "pos": [
+    -0.8,
+    1.5,
+    7.5
+   ],
+   "look_anchor": "tomb",
+   "look": [
+    0,
+    3,
+    0
+   ],
+   "fov": 30,
+   "move": [
+    0,
+    0,
+    -2.5
+   ],
+   "side": "left"
+  },
+  "The Tomb": {
+   "anchor": "door",
+   "pos": [
+    -3.5,
+    0.6,
+    12
+   ],
+   "look_anchor": "tomb",
+   "look": [
+    -1.6,
+    3.8,
+    0
+   ],
+   "fov": 40,
+   "move": [
+    0.8,
+    0.1,
+    -1.0
+   ],
+   "side": "left"
+  },
+  "Walpurgis Night": {
+   "anchor": "statue",
+   "pos": [
+    1.4,
+    1.9,
+    2.4
+   ],
+   "look": [
+    0,
+    1.6,
+    0
+   ],
+   "fov": 34,
+   "move": [
+    -0.2,
+    0,
+    -0.15
+   ],
+   "side": "left"
+  },
+  "The Hail": {
+   "anchor": "door",
+   "pos": [
+    0.3,
+    1.55,
+    -0.35
+   ],
+   "look": [
+    -1.5,
+    1.3,
+    14
+   ],
+   "fov": 52,
+   "move": [
+    0,
+    0,
+    0.25
+   ],
+   "side": "left"
+  },
+  "The Bier": {
+   "anchor": "door",
+   "pos": [
+    0.3,
+    1.55,
+    2.8
+   ],
+   "look_anchor": "bier",
+   "look": [
+    0,
+    0.4,
+    0
+   ],
+   "fov": 34,
+   "move": [
+    0,
+    0,
+    -0.3
+   ],
+   "side": "left",
+   "show": [
+    "bier_light"
+   ],
+   "open": true
+  },
+  "The Wolf": {
+   "anchor": "door",
+   "pos": [
+    1.5,
+    0.22,
+    6.0
+   ],
+   "look": [
+    0.4,
+    5.2,
+    0
+   ],
+   "fov": 46,
+   "move": [
+    0,
+    0,
+    0
+   ],
+   "side": "right",
+   "show": [
+    "wolf"
+   ],
+   "open": true
+  },
+  "Holloa": {
+   "anchor": "tomb",
+   "pos": [
+    -14,
+    2.4,
+    17
+   ],
+   "look": [
+    0,
+    2,
+    0
+   ],
+   "fov": 40,
+   "move": [
+    2,
+    0,
+    -1
+   ],
+   "side": "left",
+   "open": true
+  },
+  "The Telegram": {
+   "anchor": "munich",
+   "pos": [
+    0.18,
+    0.55,
+    0.66
+   ],
+   "look": [
+    0.12,
+    0,
+    0.34
+   ],
+   "fov": 34,
+   "move": [
+    0,
+    -0.1,
+    -0.08
+   ],
+   "side": "left",
+   "show": [
+    "telegram"
+   ]
+  },
+  "The Snow Begins": {
+   "use": "here_sky"
+  },
+  "The Howl": {
+   "use": "here_low"
+  }
+ }
+}

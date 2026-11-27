@@ -96,7 +96,7 @@ function uniqueName(words, taken) {
 const PIC_WORDS = { lum: ['bright', 'dark'], contrast: ['hard', 'soft'], sat: ['vivid', 'muted'], warmth: ['warm', 'cool'] };
 const PIC_FLOOR = { lum: 0.03, contrast: 0.02, sat: 0.03, warmth: 0.01 };
 
-function developPictures(pics) {
+export function developPictures(pics) {
   // pics: [{ id, rel, type, m }]
   const mono = pics.reduce((s, p) => s + p.m.sat, 0) / pics.length < 0.1 && pics.every((p) => Math.abs(p.m.warmth) < 0.03);
   const dims = mono ? ['lum', 'contrast'] : ['lum', 'contrast', 'sat', 'warmth'];
@@ -178,7 +178,7 @@ function developPictures(pics) {
 }
 
 // ---------- interface palette from the pictures' colours ----------
-function developPalette(pics, mono) {
+export function developPalette(pics, mono) {
   const cols = pics.flatMap((p) => (p.m.colours || []).map((c) => ({ rgb: c.rgb, w: c.share })));
   if (!cols.length) return null;
   const k = Math.min(5, cols.length);

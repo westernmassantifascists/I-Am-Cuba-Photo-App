@@ -1,7 +1,9 @@
 extends Node3D
 ## Dracula's Guest — builds the world from the downloaded scans and directs it from the story.
 ## The story (autoload Story, compiled from story/draculas-guest.twee) decides what happens;
-## this script turns its tags and feelings into place, weather, light and sound.
+## this script turns its tags and feelings into place, weather, light and sound, and frames
+## every passage as a composed shot (data/shots.json) graded with the look developed from
+## the material itself (data/look.json, written by tools/develop-look.mjs).
 
 const Player := preload("res://scripts/player.gd")
 const UI := preload("res://scripts/ui.gd")
@@ -26,8 +28,11 @@ const ROUTE := [
 	["gate", Vector2(6, -192), 3.0],
 	["tomb", Vector2(14, -226), 3.5],
 ]
-const COURTYARD := Vector2(0, 318)
+## the road north, back towards Munich
+const NORTH := Vector2(0, 318)
 const PLATEAU := 26.0
+## Munich is not on the map: it is a small lit table in the dark, a still life far above the valley.
+const MUNICH := Vector3(0, 400, 900)
 
 ## What happens when you walk into a station (passages placed with at-<station> tags).
 const STATION_TARGETS := {
@@ -48,20 +53,11 @@ const WEATHER := {
 	"dawn":      {"sky": "kloppenheim_06_puresky", "sun": 0.8, "sun_angle": -8.0, "sky_energy": 0.8, "fog": 0.01, "fog_color": Color(0.75, 0.55, 0.45), "snow": 0.0, "ground_snow": 1.0},
 }
 
-## look-<name>: colour grading.
-const LOOKS := {
-	"warm": {"saturation": 1.08, "brightness": 1.0, "contrast": 1.0},
-	"cold": {"saturation": 0.75, "brightness": 0.97, "contrast": 1.05},
-	"moon": {"saturation": 0.45, "brightness": 0.95, "contrast": 1.1},
-	"flash": {"saturation": 0.2, "brightness": 1.25, "contrast": 1.3},
-	"dark": {"saturation": 0.3, "brightness": 0.6, "contrast": 1.2},
-	"dawn": {"saturation": 0.9, "brightness": 1.02, "contrast": 1.0},
-}
-
 var player: CharacterBody3D
-var ui: CanvasLayer
+var ui: Node
 var music: Node
 var env: Environment
+var stage_env: Environment
 var world_env: WorldEnvironment
 var sun: DirectionalLight3D
 var terrain_mat: ShaderMaterial
@@ -71,7 +67,25 @@ var stations := {}
 var station_areas := {}
 var station_done := {}
 var weather := "noon"
-var look := "warm"
+
+# the developed look
+var look_data := {}
+var looks := {}
+var look := ""
+var _mood := {"brightness": 1.0, "contrast": 1.0, "saturation": 1.0, "sepia": 0.0, "tint": Vector3(0.5, 0.5, 0.5)}
+var _look_from_tag := false
+
+# the director
+var shots := {}
+var anchors := {}             # name -> Transform3D
+var show_nodes := {}          # name -> Node3D, visible only in the shots that ask for them
+var shot_cam: Camera3D
+var _shot_tween: Tween
+var letterbox := 0.0
+var door_left: Node3D
+var door_right: Node3D
+var _door_open := false
+
 var ground_snow := 0.0
 var lightning_every := 0.0
 var _lightning_t := 5.0
@@ -83,6 +97,7 @@ var rng := RandomNumberGenerator.new()
 var noise := FastNoiseLite.new()
 var autoplay := false
 var _shots_dir := ""
+var _piece_cache := {}
 
 
 func _ready() -> void:
@@ -93,15 +108,22 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--shots="):
 			_shots_dir = a.substr(8)
+	look_data = _json("res://data/look.json")
+	looks = look_data.get("looks", {})
+	shots = _json("res://data/shots.json").get("shots", {})
 	_build_environment()
 	_build_terrain()
-	_build_courtyard()
+	_build_munich()
 	_build_crossroads()
 	_scatter_nature()
 	_build_village()
 	_build_cemetery()
 	_build_stations()
 	_build_weather_particles()
+	for kit in _piece_cache.values():
+		if kit:
+			kit.free()
+	_piece_cache.clear()
 	# world built with a fixed seed; the test bot's choices use --seed=N
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--seed="):
@@ -110,11 +132,15 @@ func _ready() -> void:
 
 	player = Player.new()
 	add_child(player)
-	_place_player(Vector3(COURTYARD.x, PLATEAU + 0.2, COURTYARD.y + 8), Vector3(COURTYARD.x, PLATEAU + 1.6, COURTYARD.y - 20))
+	_place_player(stations.crossroads + Vector3(0, 0.3, 4), stations.wayside_1 + Vector3(0, 1.6, 0))
+	shot_cam = Camera3D.new()
+	shot_cam.far = 900
+	add_child(shot_cam)
 	music = Music.new()
 	add_child(music)
 	ui = UI.new()
 	add_child(ui)
+	ui.apply_grade(look_data)
 	ui.choice_pressed.connect(func(i): Story.choose(i))
 	ui.begin_again.connect(func(): get_tree().reload_current_scene())
 
@@ -136,19 +162,29 @@ func _ready() -> void:
 	Story.start.call_deferred()
 
 
+func _json(path: String) -> Dictionary:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return {}
+	var v = JSON.parse_string(f.get_as_text())
+	return v if v is Dictionary else {}
+
+
 # ================================================================== the story, directed
 
 func _on_passage(name: String, scene: Dictionary) -> void:
 	player.enabled = false
 	if not autoplay:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	ui.begin_passage()
 	if scene.has("at") and stations.has(scene.at):
 		var st: Vector3 = stations[scene.at]
 		if player.global_position.distance_to(st) > 40.0:
-			ui.dip(1.5)
 			_place_player(st + Vector3(0, 0.3, 6), st + Vector3(0, 1.6, -20))
+	_look_from_tag = false
 	_apply_scene(scene)
+	var shot := _shot_for(name, scene)
+	ui.begin_passage(shot.get("side", "left"))
+	_frame(shot)
 	if name == "Go Home, Johann":
 		_walked_out = true
 	print("[story] ", name)
@@ -157,17 +193,18 @@ func _on_passage(name: String, scene: Dictionary) -> void:
 func _apply_scene(scene: Dictionary) -> void:
 	if scene.has("music"):
 		music.set_bed(scene.music)
+	if scene.has("look") and looks.has(scene.look):
+		look = scene.look
+		_look_from_tag = true
 	if scene.has("atmosphere"):
 		_apply_weather(scene.atmosphere)
-	if scene.has("look"):
-		look = scene.look
 
 
 func _on_choices(labels: Array) -> void:
 	ui.show_choices(labels)
 	if autoplay:
 		if _shots_dir != "":
-			await get_tree().create_timer(2.5).timeout
+			await get_tree().create_timer(4.0).timeout
 			await _shot("p_" + Story.passage.to_lower().replace(" ", "_").replace(",", "").replace("'", ""))
 		else:
 			await get_tree().create_timer(0.05).timeout
@@ -188,6 +225,7 @@ func _on_walk() -> void:
 			get_tree().quit(0)
 		return
 	ui.hide_passage()
+	_release_shot()
 	player.enabled = true
 	if not autoplay:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -246,6 +284,100 @@ func _on_station(body: Node, name: String) -> void:
 	Story.go(STATION_TARGETS[name])
 
 
+# ================================================================== the director: composed shots
+
+func _shot_for(name: String, scene: Dictionary) -> Dictionary:
+	var key := name
+	if shots.has(name) and shots[name].has("use"):
+		key = shots[name].use
+	elif not shots.has(name):
+		key = "wayside" if scene.get("at", "") == "wayside" or scene.has("drift") else "here_low"
+	var s: Dictionary = shots.get(key, {"side": "left", "fov": 40}).duplicate()
+	if not s.has("anchor"):
+		s.merge(_shot_here(key), true)
+	return s
+
+
+## Shots without a fixed place are framed around wherever the walker stands.
+func _shot_here(kind: String) -> Dictionary:
+	var fwd := -player.global_basis.z
+	fwd.y = 0
+	fwd = fwd.normalized()
+	var right := fwd.cross(Vector3.UP)
+	anchors["_here"] = Transform3D(Basis.IDENTITY, player.global_position)
+	match kind:
+		"here_sky":
+			# looking up into the weather, the road a dark line at the foot of the frame
+			return {"anchor": "_here", "pos": [0, 1.5, 0], "look": [fwd.x * 20, 14, fwd.z * 20], "move": [0, 0.2, 0]}
+		"here_low":
+			# down at the snow, looking back up the road you came by
+			return {"anchor": "_here", "pos": [right.x * 0.6, 0.35, right.z * 0.6], "look": [-fwd.x * 30, 2.5, -fwd.z * 30], "move": [fwd.x * -0.4, 0, fwd.z * -0.4]}
+	# by the roadside: a little apart from the walker, looking on down the road
+	return {"anchor": "_here", "pos": [right.x * 1.6 - fwd.x, 1.25, right.z * 1.6 - fwd.z], "look": [fwd.x * 40, 1.0, fwd.z * 40], "move": [fwd.x * 1.6, 0, fwd.z * 1.6]}
+
+
+## Cut (through black) to the passage's shot and let the camera drift.
+func _frame(s: Dictionary) -> void:
+	var anchor_name: String = s.get("anchor", "_here")
+	if not anchors.has(anchor_name):
+		return
+	var a: Transform3D = anchors[anchor_name]
+	var pos: Vector3 = a * _v(s.get("pos", [0, 1.6, 4]))
+	var look_t: Transform3D = anchors.get(s.get("look_anchor", anchor_name), a)
+	var target: Vector3 = look_t * _v(s.get("look", [0, 1.5, 0]))
+	var stage := anchor_name == "munich"
+	if not stage:
+		pos.y = maxf(pos.y, height_at(pos.x, pos.z) + 0.2)
+	var move: Vector3 = a.basis * _v(s.get("move", [0, 0, 0]))
+	ui.dip(1.4 if shot_cam.current else 1.8)
+	shot_cam.environment = stage_env if stage else null
+	shot_cam.far = 40.0 if stage else 900.0
+	shot_cam.near = 0.02 if stage else 0.05
+	shot_cam.fov = float(s.get("fov", 40))
+	shot_cam.global_position = pos
+	shot_cam.look_at(target, Vector3.UP)
+	shot_cam.make_current()
+	for k in show_nodes:
+		show_nodes[k].visible = (s.get("show", []) as Array).has(k)
+	if s.get("open", false):
+		_open_door()
+	if _shot_tween:
+		_shot_tween.kill()
+	_shot_tween = create_tween().set_parallel(true)
+	_shot_tween.tween_property(self, "letterbox", 1.0, 0.01 if letterbox > 0.9 else 1.5)
+	var end := pos + move
+	if not stage:
+		end.y = maxf(end.y, height_at(end.x, end.z) + 0.2)
+	var drift := func(t: float) -> void:
+		shot_cam.global_position = pos.lerp(end, t)
+		shot_cam.look_at(target, Vector3.UP)
+	_shot_tween.tween_method(drift, 0.0, 1.0, 30.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _release_shot() -> void:
+	if _shot_tween:
+		_shot_tween.kill()
+	_shot_tween = create_tween()
+	_shot_tween.tween_property(self, "letterbox", 0.0, 1.2)
+	ui.dip(1.2)
+	player.camera.make_current()
+	for k in show_nodes:
+		show_nodes[k].visible = false
+
+
+func _v(a: Array) -> Vector3:
+	return Vector3(float(a[0]), float(a[1]), float(a[2]))
+
+
+func _open_door() -> void:
+	if _door_open or door_left == null:
+		return
+	_door_open = true
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(door_left, "rotation:y", -1.25, 2.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(door_right, "rotation:y", 1.1, 2.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
 # ================================================================== feelings → world, every frame
 
 func _process(delta: float) -> void:
@@ -272,8 +404,9 @@ func _process(delta: float) -> void:
 			Story.check_turns()
 	_feel(delta)
 	if snow:
-		snow.global_position = player.global_position + Vector3(0, 12, 0)
-		hail.global_position = player.global_position + Vector3(0, 12, 0)
+		var at := shot_cam.global_position if shot_cam.current else player.global_position
+		snow.global_position = at + Vector3(0, 12, 0)
+		hail.global_position = at + Vector3(0, 12, 0)
 	if lightning_every > 0.0:
 		_lightning_t -= delta
 		if _lightning_t <= 0.0:
@@ -282,16 +415,32 @@ func _process(delta: float) -> void:
 			get_tree().create_timer(rng.randf_range(0.6, 2.0)).timeout.connect(func(): music.sfx("res://assets/music/sfx_thunder.ogg", 0.8))
 
 
-## Colour, fog and snow follow the weather, the look and the feelings.
+## Colour, fog and snow follow the weather, the developed look and the feelings.
 func _feel(delta: float) -> void:
 	var w: Dictionary = WEATHER[weather]
-	var l: Dictionary = LOOKS.get(look, LOOKS.warm)
 	var dread := Story.meter("dread") / 100.0
 	var cold := Story.meter("cold") / 100.0
 	var k := clampf(delta * 0.8, 0.0, 1.0)
-	env.adjustment_saturation = lerpf(env.adjustment_saturation, l.saturation * (1.0 - 0.45 * dread) * (1.0 - 0.3 * cold), k)
-	env.adjustment_brightness = lerpf(env.adjustment_brightness, l.brightness * (1.0 - 0.15 * dread), k)
-	env.adjustment_contrast = lerpf(env.adjustment_contrast, l.contrast * (1.0 + 0.15 * dread), k)
+	# a developed mood is a correction measured on photographs: in the world it is felt at about half strength
+	var m: Dictionary = looks.get(look, {})
+	var soft := func(key: String, def: float) -> float: return 1.0 + (float(m.get(key, def)) - 1.0) * 0.45
+	_mood.brightness = lerpf(_mood.brightness, soft.call("brightness", 1.0), k)
+	_mood.contrast = lerpf(_mood.contrast, soft.call("contrast", 1.0), k)
+	_mood.saturation = lerpf(_mood.saturation, soft.call("saturation", 1.0), k)
+	_mood.sepia = lerpf(_mood.sepia, float(m.get("sepia", 0.0)) * 0.6, k)
+	var t: Array = m.get("tint", [0.5, 0.5, 0.5])
+	var tv := Vector3(t[0], t[1], t[2])
+	var lum := maxf(tv.dot(Vector3(0.2126, 0.7152, 0.0722)), 0.01)
+	_mood.tint = (_mood.tint as Vector3).lerp(tv / lum * 0.5, k)
+	var g: ShaderMaterial = ui.grade_mat
+	g.set_shader_parameter("mood_brightness", _mood.brightness)
+	g.set_shader_parameter("mood_contrast", _mood.contrast)
+	g.set_shader_parameter("mood_saturation", _mood.saturation)
+	g.set_shader_parameter("mood_sepia", _mood.sepia)
+	g.set_shader_parameter("mood_tint", _mood.tint)
+	g.set_shader_parameter("dread", dread)
+	g.set_shader_parameter("cold", cold)
+	g.set_shader_parameter("letterbox", letterbox)
 	env.fog_density = lerpf(env.fog_density, w.fog * (1.0 + 1.2 * dread), k)
 	env.fog_light_color = env.fog_light_color.lerp(w.fog_color.lerp(Color(0.6, 0.68, 0.8), cold * 0.3), k)
 	ground_snow = lerpf(ground_snow, maxf(ground_snow, w.get("ground_snow", 0.0)), delta * 0.08)
@@ -312,6 +461,11 @@ func _apply_weather(name: String, instant := false) -> void:
 		mat.panorama = load(sky_path)
 		mat.energy_multiplier = w.sky_energy
 		env.sky.sky_material = mat
+	# with no look of its own, a passage takes the mood its sky was developed into
+	if not _look_from_tag:
+		var sky_mood: String = look_data.get("skies", {}).get(w.sky, "")
+		if looks.has(sky_mood):
+			look = sky_mood
 	var tw := create_tween().set_parallel(true)
 	var t := 0.01 if instant else 4.0
 	tw.tween_property(sun, "light_energy", w.sun, t)
@@ -347,7 +501,6 @@ func _build_environment() -> void:
 	env.fog_sky_affect = 0.6
 	env.glow_enabled = true
 	env.glow_intensity = 0.4
-	env.adjustment_enabled = true
 	env.ssao_enabled = true
 	world_env = WorldEnvironment.new()
 	world_env.environment = env
@@ -357,6 +510,17 @@ func _build_environment() -> void:
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 120.0
 	add_child(sun)
+	# the Munich still life is lit only by its own lamp, in the dark
+	stage_env = Environment.new()
+	stage_env.background_mode = Environment.BG_COLOR
+	stage_env.background_color = Color(0.004, 0.004, 0.005)
+	stage_env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	stage_env.ambient_light_color = Color(0.05, 0.05, 0.06)
+	stage_env.ambient_light_energy = 0.4
+	stage_env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	stage_env.glow_enabled = true
+	stage_env.glow_intensity = 0.6
+	stage_env.ssao_enabled = true
 
 
 # ---- terrain: a road down from the plateau into a valley, hills on either side
@@ -374,9 +538,9 @@ func _road_info(p: Vector2) -> Vector2:
 		if d < best:
 			best = d
 			h = lerpf(ROUTE[i][2], ROUTE[i + 1][2], t)
-	# the plateau road on to the courtyard
+	# the plateau road north, the way the carriage came
 	var a2: Vector2 = ROUTE[0][1]
-	var ab2 := COURTYARD - a2
+	var ab2 := NORTH - a2
 	var t2 := clampf((p - a2).dot(ab2) / ab2.length_squared(), 0.0, 1.0)
 	var d2 := p.distance_to(a2 + ab2 * t2)
 	if d2 < best:
@@ -397,8 +561,8 @@ func height_at(x: float, z: float) -> float:
 	var hills := noise.get_noise_2d(x, z) * lerpf(3.0, 9.0, valley) * smoothstep(4.0, 24.0, d)
 	var swell := noise.get_noise_2d(x * 0.25 + 400.0, z * 0.25) * 10.0 * smoothstep(20.0, 60.0, d)
 	var h := info.y + minf(side, 60.0) + hills + swell
-	# flat places: the courtyard, the village green, the churchyard
-	for flat in [[COURTYARD, 30.0, PLATEAU], [ROUTE[8][1], 28.0, ROUTE[8][2]], [ROUTE[11][1], 32.0, ROUTE[11][2]]]:
+	# flat places: the village green, the churchyard
+	for flat in [[ROUTE[8][1], 28.0, ROUTE[8][2]], [ROUTE[11][1], 32.0, ROUTE[11][2]]]:
 		var f := 1.0 - smoothstep(flat[1] * 0.6, flat[1], p.distance_to(flat[0]))
 		h = lerpf(h, flat[2], f)
 	return h
@@ -491,7 +655,9 @@ func _mat(id: String, tile := 0.5) -> StandardMaterial3D:
 	return m
 
 
-func _box(size: Vector3, pos: Vector3, mat: Material, rot_y := 0.0, collide := true, parent: Node = null) -> MeshInstance3D:
+## A block of scanned surface (used for the tomb's masonry, the bier and the gravestones —
+## the things that really are cut blocks — never for buildings).
+func _block(size: Vector3, pos: Vector3, mat: Material, rot_y := 0.0, collide := true, parent: Node = null) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = size
@@ -519,6 +685,29 @@ func _scan(id: String) -> Node3D:
 	return scene.instantiate()
 
 
+## One named piece of a scanned kit (e.g. one wall of modular_fort_01), positioned at its own origin.
+func _piece(id: String, piece: String, collide := true) -> Node3D:
+	if not _piece_cache.has(id):
+		_piece_cache[id] = _scan(id)
+	var kit: Node3D = _piece_cache[id]
+	if kit == null:
+		return null
+	var src := kit.find_child(id + "_" + piece, true, false)
+	if src == null:
+		return null
+	var n: Node3D = src.duplicate()
+	n.transform = Transform3D.IDENTITY
+	if collide and DisplayServer.get_name() != "headless" and n is MeshInstance3D and (n as MeshInstance3D).mesh:
+		var shape := (n as MeshInstance3D).mesh.create_trimesh_shape()
+		if shape and shape.get_faces().size() > 0:
+			var body := StaticBody3D.new()
+			var cs := CollisionShape3D.new()
+			cs.shape = shape
+			body.add_child(cs)
+			n.add_child(body)
+	return n
+
+
 func _place(id: String, pos: Vector3, scale := 1.0, rot := 0.0, tilt := 0.0) -> Node3D:
 	var n := _scan(id)
 	if n == null:
@@ -531,71 +720,172 @@ func _place(id: String, pos: Vector3, scale := 1.0, rot := 0.0, tilt := 0.0) -> 
 
 
 func _fit_height(n: Node3D, h: float) -> void:
+	var aabb := _aabb(n)
+	if aabb.size.y > 0.01:
+		n.scale = Vector3.ONE * (h / aabb.size.y)
+
+
+func _aabb(n: Node3D) -> AABB:
 	var aabb := AABB()
 	var first := true
 	for mi in n.find_children("*", "MeshInstance3D", true, false):
 		var bb: AABB = (mi as MeshInstance3D).get_aabb()
-		bb = (mi as MeshInstance3D).transform * bb
+		var tr: Transform3D = n.global_transform.affine_inverse() * (mi as MeshInstance3D).global_transform if n.is_inside_tree() else (mi as MeshInstance3D).transform
+		bb = tr * bb
 		aabb = bb if first else aabb.merge(bb)
 		first = false
-	if not first and aabb.size.y > 0.01:
-		n.scale = Vector3.ONE * (h / aabb.size.y)
+	return aabb
 
 
 func _ground(x: float, z: float) -> Vector3:
 	return Vector3(x, height_at(x, z), z)
 
 
+## A basis whose z axis points along dir (flattened), y up.
+func _facing(dir: Vector3) -> Basis:
+	var z := Vector3(dir.x, 0, dir.z).normalized()
+	var x := Vector3.UP.cross(z)
+	return Basis(x, Vector3.UP, z)
+
+
+func _dark_mat(c: Color, rough := 0.9) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.roughness = rough
+	return m
+
+
 # ---- places
 
-func _build_courtyard() -> void:
-	var c := COURTYARD
-	var cobble := _mat("cobblestone_floor_01", 0.35)
-	_box(Vector3(36, 0.4, 36), Vector3(c.x, PLATEAU - 0.15, c.y), cobble)
-	var plaster := _mat("worn_mossy_plasterwall", 0.3)
-	var roof := _mat("roof_slates_02", 0.4)
-	var dark := StandardMaterial3D.new()
-	dark.albedo_color = Color(0.05, 0.05, 0.06)
-	# the Quatre Saisons: a long facade with windows, and a wing
-	_box(Vector3(30, 12, 6), Vector3(c.x, PLATEAU + 6, c.y - 18), plaster)
-	_box(Vector3(31, 0.6, 7.5), Vector3(c.x, PLATEAU + 12.3, c.y - 18), roof)
-	for i in 6:
-		for row in 2:
-			_box(Vector3(1.6, 2.4, 0.2), Vector3(c.x - 12.5 + i * 5, PLATEAU + 4 + row * 4.5, c.y - 14.95), dark, 0.0, false)
-	_box(Vector3(3, 3.6, 0.3), Vector3(c.x, PLATEAU + 1.8, c.y - 14.9), dark, 0.0, false)
-	_box(Vector3(6, 10, 22), Vector3(c.x - 17, PLATEAU + 5, c.y - 4), plaster)
-	# the carriage
-	var planks := _mat("weathered_planks", 0.6)
-	_box(Vector3(1.8, 1.6, 3.2), Vector3(c.x + 6, PLATEAU + 1.4, c.y - 2), planks, 0.0)
-	for wx in [-1.0, 1.0]:
-		for wz in [-1.1, 1.1]:
-			var wheel := MeshInstance3D.new()
-			var cyl := CylinderMesh.new()
-			cyl.top_radius = 0.55
-			cyl.bottom_radius = 0.55
-			cyl.height = 0.08
-			wheel.mesh = cyl
-			wheel.material_override = planks
-			wheel.position = Vector3(c.x + 6 + wx * 0.95, PLATEAU + 0.55, c.y - 2 + wz)
-			wheel.rotation.z = PI / 2
-			add_child(wheel)
+## Munich: the hotel morning as a still life — the carved horse's head (a scan) on a table, a
+## lamp, the day's card; the telegram for the last scene. Black all round, as on a stage.
+func _build_munich() -> void:
+	var stage := Node3D.new()
+	stage.position = MUNICH
+	add_child(stage)
+	anchors["munich"] = Transform3D(Basis.IDENTITY, MUNICH)
+	var table := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(9.0, 7.0)
+	table.mesh = pm
+	var wood := _mat("weathered_planks", 1.0)
+	wood.uv1_triplanar = false
+	wood.uv1_world_triplanar = false
+	wood.uv1_scale = Vector3(6.0, 4.7, 1.0)
+	table.material_override = wood
+	stage.add_child(table)
+	var horse := _scan("horse_head")
+	if horse:
+		stage.add_child(horse)
+		horse.rotation.y = deg_to_rad(28)
 	var lamp := OmniLight3D.new()
-	lamp.position = Vector3(c.x, PLATEAU + 4, c.y - 13)
-	lamp.light_color = Color(1, 0.8, 0.55)
-	lamp.light_energy = 0.6
-	lamp.omni_range = 10
-	add_child(lamp)
+	lamp.position = Vector3(0.55, 0.55, 0.25)
+	lamp.light_color = Color(1.0, 0.74, 0.46)
+	lamp.light_energy = 2.4
+	lamp.omni_range = 5.0
+	lamp.omni_attenuation = 1.6
+	lamp.shadow_enabled = true
+	stage.add_child(lamp)
+	# a cold rim from the window behind
+	var rim := SpotLight3D.new()
+	rim.position = Vector3(-1.2, 1.4, -1.6)
+	rim.look_at_from_position(rim.position, Vector3(0, 0.15, 0))
+	rim.light_color = Color(0.7, 0.8, 1.0)
+	rim.light_energy = 2.5
+	rim.spot_range = 5.0
+	rim.spot_angle = 22.0
+	rim.shadow_enabled = true
+	stage.add_child(rim)
+	var paper := _dark_mat(Color(0.62, 0.58, 0.5), 0.95)
+	var display: Font = load("res://fonts/IMFeENsc28P.ttf")
+	# the hotel's card for the day, propped against the horse
+	var card := Node3D.new()
+	card.position = Vector3(-0.32, 0.0, 0.18)
+	card.rotation = Vector3(0, deg_to_rad(-20), 0)
+	stage.add_child(card)
+	var cq := MeshInstance3D.new()
+	var cm := QuadMesh.new()
+	cm.size = Vector2(0.18, 0.12)
+	cq.mesh = cm
+	cq.material_override = paper
+	cq.position = Vector3(0, 0.05, 0)
+	cq.rotation.x = deg_to_rad(-14)
+	card.add_child(cq)
+	var ct := Label3D.new()
+	ct.text = "Hôtel Quatre Saisons\n\nWALPURGIS NACHT\n30 April"
+	ct.font = display
+	ct.font_size = 48
+	ct.pixel_size = 0.00028
+	ct.modulate = Color(0.14, 0.1, 0.08)
+	ct.outline_size = 0
+	ct.shaded = true
+	ct.position = Vector3(0, 0.0, 0.002)
+	cq.add_child(ct)
+	show_nodes["card"] = card
+	# the telegram, opened on the table
+	var tel := Node3D.new()
+	tel.position = Vector3(0.12, 0.002, 0.34)
+	stage.add_child(tel)
+	tel.rotation.x = -PI / 2
+	var tq := MeshInstance3D.new()
+	var tm := QuadMesh.new()
+	tm.size = Vector2(0.27, 0.19)
+	tq.mesh = tm
+	tq.material_override = paper
+	tel.add_child(tq)
+	var tt := Label3D.new()
+	tt.text = "Bistritz.\nBe careful of my guest — his safety is most\nprecious to me. Should aught happen to him, or if\nhe be missed, spare nothing to find him and ensure\nhis safety. He is English and therefore adventurous.\nThere is often danger from snow and wolves and night.\nLose not a moment if you suspect harm to him.\n\nDracula."
+	tt.font = display
+	tt.font_size = 40
+	tt.pixel_size = 0.00026
+	tt.modulate = Color(0.05, 0.04, 0.035)
+	tt.outline_size = 0
+	tt.shaded = true
+	tt.position = Vector3(0, 0, 0.002)
+	tq.add_child(tt)
+	show_nodes["telegram"] = tel
 
 
 func _build_crossroads() -> void:
 	var p: Vector2 = ROUTE[0][1]
+	anchors["crossroads"] = Transform3D(Basis.IDENTITY, _ground(p.x, p.y))
 	var planks := _mat("weathered_planks", 0.8)
-	# the suicide's grave at the cross roads, marked with a cross
+	# the suicide's grave at the cross roads, marked with a rough cross of two weathered beams
 	var g := _ground(p.x + 5, p.y + 1)
-	_box(Vector3(0.18, 2.4, 0.18), g + Vector3(0, 1.2, 0), planks, 0.3)
-	_box(Vector3(1.1, 0.16, 0.16), g + Vector3(0, 1.75, 0), planks, 0.3)
+	anchors["cross"] = Transform3D(Basis.IDENTITY, g)
+	var cross := Node3D.new()
+	cross.position = g
+	cross.rotation = Vector3(0.04, 0.3, -0.06)
+	add_child(cross)
+	_block(Vector3(0.16, 2.4, 0.14), Vector3(0, 1.1, 0), planks, 0.0, true, cross)
+	_block(Vector3(1.05, 0.14, 0.13), Vector3(0, 1.72, 0), planks, 0.0, false, cross)
 	_place("stone_01", g + Vector3(0.6, 0, 0.4), 2.0, 1.0)
+	_place("stone_01", g + Vector3(-0.5, 0, -0.3), 1.4, 2.2)
 	_place("dry_branches_medium_01", _ground(p.x - 4, p.y - 6), 1.0, 0.7)
+	# the crest where the tall, thin stranger stands: the highest ground in sight to the west
+	var best := _ground(-34, 190)
+	for i in 24:
+		var a := deg_to_rad(200.0 + i * 3.0)
+		for r in [40.0, 50.0, 60.0]:
+			var q: Vector2 = p + Vector2(cos(a), sin(a)) * r
+			var c: Vector3 = _ground(q.x, q.y)
+			if c.y > best.y:
+				best = c
+	anchors["crest"] = Transform3D(Basis.IDENTITY, best)
+	var figure := _scan("gothic_statue")
+	if figure:
+		var holder := Node3D.new()
+		holder.position = best
+		holder.basis = _facing(_ground(p.x, p.y) - best)
+		add_child(holder)
+		holder.add_child(figure)
+		_fit_height(figure, 2.35)
+		figure.scale.x *= 0.8
+		figure.scale.z *= 0.8
+		for mi in figure.find_children("*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).material_override = _dark_mat(Color(0.015, 0.015, 0.018))
+		show_nodes["figure"] = holder
+		holder.visible = false
 
 
 func _scatter(id: String, count: int, dmin: float, dmax: float, smin: float, smax: float, zmin := -300.0, zmax := 260.0, sink := 0.0) -> void:
@@ -611,7 +901,7 @@ func _scatter(id: String, count: int, dmin: float, dmax: float, smin: float, sma
 		if d < dmin or d > dmax:
 			continue
 		# keep the churchyard and the village green clear
-		if Vector2(x, z).distance_to(ROUTE[11][1]) < 26.0 or Vector2(x, z).distance_to(COURTYARD) < 30.0:
+		if Vector2(x, z).distance_to(ROUTE[11][1]) < 26.0 or Vector2(x, z).distance_to(ROUTE[8][1]) < 22.0:
 			continue
 		_place(id, _ground(x, z) - Vector3(0, sink, 0), rng.randf_range(smin, smax), rng.randf_range(0, TAU))
 		placed += 1
@@ -634,127 +924,196 @@ func _scatter_nature() -> void:
 	_scatter("fern_02", 20, 4, 20, 1.0, 1.6, -200, 120)
 	_scatter("moss_01", 8, 4, 16, 1.0, 1.5, -200, 120)
 	# firs on the slopes: the "scattered fringe of wood" and the clumps on the hills
-	_scatter("fir_sapling", 40, 12, 90, 3.0, 5.5, -280, 160)
+	_scatter("fir_sapling", 26, 12, 90, 3.0, 5.5, -280, 160)
 
 
+## The deserted village: roofless houses and the stump of a church tower, all from the
+## photogrammetry fort kit (modular_fort_01), brought down to the size of cottages.
 func _build_village() -> void:
 	var c: Vector2 = ROUTE[8][1]
-	var plaster := _mat("worn_mossy_plasterwall", 0.35)
-	var roof := _mat("roof_slates_02", 0.4)
-	var spots := [Vector2(-16, 8), Vector2(14, 10), Vector2(-14, -12), Vector2(16, -14), Vector2(0, 22), Vector2(-26, -2), Vector2(26, 0)]
+	var centre := _ground(c.x, c.y)
+	anchors["village"] = Transform3D(Basis.IDENTITY, centre)
+	# the church tower, broken off above the bell-floor
+	var tower_at := _ground(c.x + 5, c.y - 15)
+	anchors["tower"] = Transform3D(Basis.IDENTITY, tower_at)
+	var tower := _piece("modular_fort_01", "tower_round")
+	if tower:
+		tower.position = tower_at - Vector3(0, 0.3, 0)
+		tower.scale = Vector3(0.5, 0.62, 0.5)
+		tower.rotation.y = 0.8
+		add_child(tower)
+	var spots := [Vector2(-16, 8), Vector2(14, 10), Vector2(-14, -12), Vector2(-26, -2), Vector2(26, 0), Vector2(-6, 20), Vector2(18, -6)]
 	for i in spots.size():
 		var s: Vector2 = c + spots[i]
-		var w := rng.randf_range(5, 8)
-		var d := rng.randf_range(5, 7)
-		var rot := rng.randf_range(-0.3, 0.3) + (PI / 2 if i % 2 == 0 else 0.0)
-		var base := _ground(s.x, s.y)
-		var holder := Node3D.new()
-		holder.position = base
-		holder.rotation.y = rot
-		add_child(holder)
-		# four broken walls, a doorway with no door; the snow lies inside as it lies outside
-		for wall in [[Vector3(0, 0, -d / 2), w, 0.0], [Vector3(0, 0, d / 2), w, 0.0], [Vector3(-w / 2, 0, 0), d, PI / 2], [Vector3(w / 2, 0, 0), d, PI / 2]]:
-			var h := rng.randf_range(1.2, 4.2)
-			var len: float = wall[1]
-			var at: Vector3 = wall[0]
-			if at.z > 0.0:
-				# the doorway
-				for part in [-1.0, 1.0]:
-					var seg := (len - 1.4) / 2.0
-					_box(Vector3(seg, h, 0.45), Vector3(part * (0.7 + seg / 2.0), h / 2.0, at.z), plaster, 0.0, true, holder)
-			else:
-				_box(Vector3(len, h, 0.45), at + Vector3(0, h / 2.0, 0), plaster, wall[2], true, holder)
-		if i % 3 == 0:
-			var r := _box(Vector3(w + 0.6, 0.25, d * 0.6), Vector3(0, 3.6, -d * 0.2), roof, 0.0, true, holder)
-			r.rotation.x = 0.35
-		_place("nettle_plant", base + Vector3(rng.randf_range(-1, 1), 0, rng.randf_range(-1, 1)), rng.randf_range(1.0, 1.6), rng.randf())
+		var house := Node3D.new()
+		house.position = _ground(s.x, s.y) - Vector3(0, 0.15, 0)
+		house.rotation.y = rng.randf_range(-0.35, 0.35) + (PI / 2 if i % 2 == 0 else 0.0)
+		var k := rng.randf_range(0.36, 0.46)
+		house.scale = Vector3(k, rng.randf_range(0.3, 0.48), k)
+		add_child(house)
+		# front with its empty doorway, two side walls, and (sometimes) what is left of the back
+		var parts := [["wall_thin_gate_01", Vector3(0, 0, 14.82), PI / 2], ["wall_thin_straight_01", Vector3(0, 0, 0), 0.0], ["wall_thin_straight_02", Vector3(5.0, 0, 0), 0.0]]
+		if i % 3 != 1:
+			parts.append(["wall_thin_straight_04", Vector3(0, 0, 2.55), PI / 2])
+		for part in parts:
+			var n := _piece("modular_fort_01", part[0])
+			if n:
+				n.position = part[1] - Vector3(3.8, 0, 7.4)
+				n.rotation.y = part[2]
+				house.add_child(n)
+		_place("nettle_plant", _ground(s.x, s.y) + Vector3(rng.randf_range(-1, 1), 0, rng.randf_range(-1, 1)), rng.randf_range(1.0, 1.6), rng.randf())
 
 
 func _build_cemetery() -> void:
 	var c: Vector2 = ROUTE[11][1]
 	var gate: Vector2 = ROUTE[10][1]
 	var center := _ground(c.x, c.y)
-	var wall := _mat("mossy_stone_wall", 0.4)
 	var marble := _mat("marble_01", 0.35)
 	var blocks := _mat("medieval_blocks_02", 0.35)
-	# a low wall round the copse, open towards the road
+	anchors["gate"] = Transform3D(Basis.IDENTITY, _ground(gate.x, gate.y))
+	# a low wall of scanned stone round the copse (the fort kit's thin wall, cut down), with an iron gate
 	var to_gate := (gate - c).angle()
 	var r := 24.0
-	for k in 40:
-		var a := TAU * k / 40.0
-		if absf(wrapf(a - to_gate, -PI, PI)) < 0.2:
+	var seg := 2.9
+	var n_seg := int(TAU * r / seg)
+	for k in n_seg:
+		var a := TAU * k / n_seg
+		if absf(wrapf(a - to_gate, -PI, PI)) < 0.085:
 			continue
 		var p := c + Vector2(cos(a), sin(a)) * r
-		var g := _ground(p.x, p.y)
-		_box(Vector3(4.0, 1.2, 0.6), g + Vector3(0, 0.5, 0), wall, -a + PI / 2)
-	# gravestones, leaning
+		var tangent := Vector3(-sin(a), 0, cos(a))
+		var holder := Node3D.new()
+		holder.position = _ground(p.x, p.y) - Vector3(0, 0.25, 0)
+		holder.basis = _facing(tangent)
+		add_child(holder)
+		var w := _piece("modular_fort_01", "wall_thin_straight_03")
+		if w:
+			w.scale = Vector3(0.2, rng.randf_range(0.17, 0.21), seg / 7.41 + 0.02)
+			w.position = Vector3(-0.25, 0, -seg / 2.0)
+			holder.add_child(w)
+	var gp := c + Vector2(cos(to_gate), sin(to_gate)) * r
+	var iron := _scan("large_iron_gate")
+	if iron:
+		var gh := Node3D.new()
+		gh.position = _ground(gp.x, gp.y)
+		var radial := Vector3(cos(to_gate), 0, sin(to_gate))
+		gh.basis = Basis(Vector3(-sin(to_gate), 0, cos(to_gate)), Vector3.UP, radial)
+		add_child(gh)
+		gh.add_child(iron)
+		# the gate stands open: swing each leaf on its hinge
+		for leaf in [["large_iron_gate_left_door", -1.43, -1.1], ["large_iron_gate_right_door", 1.43, 1.25]]:
+			var d := iron.find_child(leaf[0], true, false) as Node3D
+			if d:
+				var hinge := Node3D.new()
+				hinge.position = Vector3(leaf[1], 0, 0)
+				iron.add_child(hinge)
+				d.get_parent().remove_child(d)
+				hinge.add_child(d)
+				d.position = Vector3(-leaf[1], 0, 0)
+				hinge.rotation.y = leaf[2]
+	# gravestones, leaning, sunk in the snow
 	for k in 22:
 		var a := rng.randf_range(0, TAU)
 		var rr := rng.randf_range(8, 20)
 		var p := c + Vector2(cos(a), sin(a)) * rr
 		if absf(wrapf(a - to_gate, -PI, PI)) < 0.35:
 			continue
-		var stone := _box(Vector3(0.7, rng.randf_range(0.8, 1.4), 0.15), _ground(p.x, p.y) + Vector3(0, 0.5, 0), marble, rng.randf_range(0, TAU))
-		stone.rotation.x = rng.randf_range(-0.15, 0.15)
+		var stone := _block(Vector3(0.62, rng.randf_range(0.7, 1.3), 0.14), _ground(p.x, p.y) + Vector3(0, 0.4, 0), marble, rng.randf_range(0, TAU))
+		stone.rotation.x = rng.randf_range(-0.18, 0.18)
+		stone.rotation.z = rng.randf_range(-0.1, 0.1)
 	# the cypress alley from the gap in the wall to the tomb (firs, drawn tall and narrow)
 	for k in 7:
 		var t := float(k) / 6.0
-		var p := gate.lerp(c, 0.25 + t * 0.6)
+		var p := gp.lerp(c, 0.12 + t * 0.6)
 		var side := (c - gate).orthogonal().normalized() * 3.5
 		for s in [-1.0, 1.0]:
 			var q: Vector2 = p + side * s
 			var tree := _place("fir_sapling", _ground(q.x, q.y), 1.0, rng.randf_range(0, TAU))
 			if tree:
 				tree.scale = Vector3(2.0, 5.5, 2.0)
-	# the tomb: a few vast blocks of white marble on a stone plinth
-	var face := (gate - c).normalized()
-	var yaw := atan2(face.x, face.y)
+	_build_tomb(center, (gate - c).normalized(), marble, blocks)
+
+
+## The tomb: vast blocks of white marble on a stone plinth, hollow, with a deep doorway and
+## a scanned oak door; the bier inside; the great iron stake through the roof.
+func _build_tomb(center: Vector3, face: Vector2, marble: Material, blocks: Material) -> void:
 	var tomb := Node3D.new()
 	tomb.position = center
-	tomb.rotation.y = yaw
+	tomb.basis = _facing(Vector3(face.x, 0, face.y))
 	add_child(tomb)
-	for part in [[Vector3(7.5, 0.8, 9.5), Vector3(0, 0.4, 0), blocks], [Vector3(5.5, 4.2, 7.5), Vector3(0, 2.9, 0), marble], [Vector3(6.1, 0.6, 8.1), Vector3(0, 5.3, 0), marble]]:
-		_box(part[0], part[1], part[2], 0.0, true, tomb)
-	# the deep Doric doorway and its bronze door
-	var dark := StandardMaterial3D.new()
-	dark.albedo_color = Color(0.01, 0.01, 0.01)
-	_box(Vector3(2.2, 3.0, 0.8), Vector3(0, 2.3, 3.5), dark, 0.0, false, tomb)
-	var bronze := StandardMaterial3D.new()
-	bronze.albedo_color = Color(0.22, 0.17, 0.1)
-	bronze.metallic = 0.8
-	bronze.roughness = 0.45
-	_box(Vector3(1.9, 2.8, 0.12), Vector3(0, 2.2, 3.35), bronze, 0.0, true, tomb)
+	var T := tomb.transform
+	anchors["tomb"] = T
+	anchors["door"] = T * Transform3D(Basis.IDENTITY, Vector3(0, 0.8, 3.75))
+	anchors["statue"] = T * Transform3D(Basis.IDENTITY, Vector3(3.6, 0.8, 4.2))
+	anchors["bier"] = T * Transform3D(Basis.IDENTITY, Vector3(0, 1.5, -1.2))
+	_block(Vector3(7.5, 0.8, 9.5), Vector3(0, 0.4, 0), blocks, 0.0, true, tomb)
+	# walls: back, two sides, the front in three pieces round the doorway
+	for part in [
+		[Vector3(5.5, 4.2, 0.6), Vector3(0, 2.9, -3.45)],
+		[Vector3(0.6, 4.2, 7.5), Vector3(-2.45, 2.9, 0)],
+		[Vector3(0.6, 4.2, 7.5), Vector3(2.45, 2.9, 0)],
+		[Vector3(1.75, 4.2, 0.6), Vector3(-1.875, 2.9, 3.45)],
+		[Vector3(1.75, 4.2, 0.6), Vector3(1.875, 2.9, 3.45)],
+		[Vector3(2.0, 1.25, 0.6), Vector3(0, 4.375, 3.45)],
+		[Vector3(6.1, 0.6, 8.1), Vector3(0, 5.3, 0)],
+		[Vector3(6.4, 0.25, 8.4), Vector3(0, 5.72, 0)],
+	]:
+		_block(part[0], part[1], marble, 0.0, true, tomb)
+	# the door: a photographed oak door in its stone frame
+	var door := _scan("large_castle_door")
+	if door:
+		door.position = Vector3(0, 0.8, 3.2)
+		tomb.add_child(door)
+		door_left = door.find_child("large_castle_door_left", true, false) as Node3D
+		door_right = door.find_child("large_castle_door_right", true, false) as Node3D
+	# inside: the bier and the one who lies on it
+	_block(Vector3(2.3, 0.7, 1.5), Vector3(0, 1.15, -1.2), marble, 0.0, true, tomb)
+	var sleeper := _scan("gothic_statue")
+	if sleeper:
+		var h := Node3D.new()
+		h.position = Vector3(0, 1.5, -1.2)
+		tomb.add_child(h)
+		h.add_child(sleeper)
+		sleeper.rotation.z = PI / 2
+		# lying on her back along the bier (the scan stands 1.74 m with its origin 1.19 m up)
+		sleeper.position = Vector3(0.85, 0.2, 0.41)
+	var inner := OmniLight3D.new()
+	inner.position = Vector3(0.6, 3.6, 0.5)
+	inner.light_color = Color(0.75, 0.82, 1.0)
+	inner.light_energy = 1.4
+	inner.omni_range = 6.0
+	inner.shadow_enabled = true
+	inner.visible = false
+	tomb.add_child(inner)
+	show_nodes["bier_light"] = inner
 	# the great iron stake driven through the marble
-	var iron := StandardMaterial3D.new()
-	iron.albedo_color = Color(0.08, 0.07, 0.07)
-	iron.metallic = 0.6
-	iron.roughness = 0.7
 	var stake := MeshInstance3D.new()
 	var cyl := CylinderMesh.new()
 	cyl.top_radius = 0.03
 	cyl.bottom_radius = 0.14
 	cyl.height = 3.2
 	stake.mesh = cyl
+	var iron := _dark_mat(Color(0.08, 0.07, 0.07), 0.7)
+	iron.metallic = 0.6
 	stake.material_override = iron
-	stake.position = Vector3(0, 7.1, 0)
+	stake.position = Vector3(0, 7.2, 0)
+	stake.rotation.z = 0.05
 	tomb.add_child(stake)
-	# the inscriptions
-	var front := Label3D.new()
-	front.text = "COUNTESS DOLINGEN OF GRATZ\nIN STYRIA\nSOUGHT AND FOUND DEATH\n1801"
-	front.font_size = 64
-	front.pixel_size = 0.0035
-	front.modulate = Color(0.25, 0.22, 0.2)
-	front.position = Vector3(0, 4.35, 3.77)
-	front.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tomb.add_child(front)
-	var back := Label3D.new()
-	back.text = "МЁРТВЫЕ ЕЗДЯТ БЫСТРО"
-	back.font_size = 72
-	back.pixel_size = 0.004
-	back.modulate = Color(0.25, 0.22, 0.2)
-	back.position = Vector3(0, 3.0, -3.77)
-	back.rotation.y = PI
-	tomb.add_child(back)
+	# the inscriptions, cut in the marble
+	var cut: Font = load("res://fonts/IMFeENsc28P.ttf")
+	for ins in [["COUNTESS DOLINGEN OF GRATZ\nIN STYRIA\nSOUGHT AND FOUND DEATH\n1801", Vector3(0, 4.42, 3.76), 0.0, 56], ["THE DEAD TRAVEL FAST", Vector3(0, 3.4, -3.76), PI, 72]]:
+		var l := Label3D.new()
+		l.text = ins[0]
+		l.font = cut
+		l.font_size = ins[3]
+		l.pixel_size = 0.0034
+		l.modulate = Color(0.22, 0.2, 0.18)
+		l.outline_size = 0
+		l.shaded = true
+		l.position = ins[1]
+		l.rotation.y = ins[2]
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		tomb.add_child(l)
 	# a weathered, veiled statue keeps watch beside the door
 	var statue := _scan("gothic_statue")
 	if statue:
@@ -762,6 +1121,26 @@ func _build_cemetery() -> void:
 		_fit_height(statue, 2.2)
 		statue.position = Vector3(3.6, 0.8, 4.2)
 		statue.rotation.y = PI * 0.1
+	# the wolf: two eyes at the edge of the roof, looking down
+	var eyes := Node3D.new()
+	eyes.position = Vector3(0.55, 6.06, 4.1)
+	tomb.add_child(eyes)
+	var glow := StandardMaterial3D.new()
+	glow.albedo_color = Color(0.1, 0.05, 0.0)
+	glow.emission_enabled = true
+	glow.emission = Color(1.0, 0.62, 0.25)
+	glow.emission_energy_multiplier = 9.0
+	for x in [-0.07, 0.07]:
+		var e := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = 0.05
+		sm.height = 0.06
+		e.mesh = sm
+		e.material_override = glow
+		e.position = Vector3(x, 0, 0)
+		eyes.add_child(e)
+	eyes.visible = false
+	show_nodes["wolf"] = eyes
 
 
 func _build_stations() -> void:
@@ -770,7 +1149,6 @@ func _build_stations() -> void:
 			continue
 		var p: Vector2 = r[1]
 		stations[r[0]] = _ground(p.x, p.y)
-	stations["courtyard"] = Vector3(COURTYARD.x, PLATEAU, COURTYARD.y + 8)
 	for name in STATION_TARGETS:
 		var area := Area3D.new()
 		var cs := CollisionShape3D.new()
@@ -834,14 +1212,11 @@ func _auto_walk() -> void:
 	var order := ["wayside_1", "wayside_2", "wayside_3", "wayside_4", "village", "gate", "tomb"]
 	for name in order:
 		if not station_done.has(name):
-			if _shots_dir != "":
-				# stop short of the station, look at it, and take a picture of the world
-				var to: Vector3 = stations[name]
-				player.global_position = to + (player.global_position - to).normalized() * 14.0 + Vector3(0, 2.0, 0)
-				player.face(to + Vector3(0, 1.5, 0))
-				await get_tree().create_timer(2.5).timeout
-				await _shot("w_" + name)
-			player.global_position = stations[name] + Vector3(0, 0.5, 0)
+			var to: Vector3 = stations[name]
+			# arrive facing on down the road, as a walker would
+			var from := player.global_position
+			player.global_position = to + Vector3(0, 0.5, 0)
+			player.face(to + (to - from).normalized() * 10.0 + Vector3(0, 1.5, 0))
 			# let some cold accumulate on the way
 			Story.nudge({"cold": 4.0})
 			return
@@ -849,39 +1224,56 @@ func _auto_walk() -> void:
 	get_tree().quit(1)
 
 
-## --views=<folder>: one still of each place in its weather (no story), then quit.
+## --views=<folder>: a still of each composed shot in its own weather and look (no story), then quit.
+## --only=<passage>,<passage> limits it to those passages.
 func _render_views(dir: String) -> void:
 	_shots_dir = dir
 	ui.hint.visible = false
-	var views := [
-		["courtyard", "noon", Vector3(COURTYARD.x + 6, PLATEAU + 1.7, COURTYARD.y + 14), Vector3(COURTYARD.x - 3, PLATEAU + 5, COURTYARD.y - 18), 0.0, 0.0],
-		["crossroads", "afternoon", stations.crossroads + Vector3(-6, 1.7, 10), stations.wayside_1, 0.0, 0.0],
-		["valley", "evening", stations.wayside_2 + Vector3(4, 2.5, 18), stations.wayside_3, 0.0, 0.0],
-		["snow", "snow", stations.wayside_4 + Vector3(0, 1.8, 14), stations.village, 0.6, 0.6],
-		["village", "dusk", stations.village + Vector3(10, 2.0, 22), stations.village, 0.3, 0.3],
-		["cypresses", "storm", stations.gate + Vector3(-4, 1.8, 10), stations.tomb + Vector3(0, 3, 0), 1.0, 0.7],
-		["tomb", "moon", stations.tomb + Vector3(7, 1.7, 13), stations.tomb + Vector3(0, 3, 0), 1.0, 0.6],
-		["dawn", "dawn", stations.tomb + Vector3(-10, 2.0, 16), stations.tomb + Vector3(0, 2, 0), 0.2, 0.9],
-	]
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--only="):
 			only = a.substr(7).split(",")
-	for v in views:
-		if not only.is_empty() and not only.has(v[0]):
+	var feel := {"Walpurgis Night": [0.6, 0.6], "The Hail": [0.7, 0.7], "The Bier": [0.9, 0.7], "The Wolf": [1.0, 0.8], "The Cypress Alley": [0.5, 0.5], "The Tomb": [0.5, 0.5], "Holloa": [0.3, 0.9], "The Deserted Village": [0.3, 0.4]}
+	for name in Story.data.passages:
+		var p: Dictionary = Story.data.passages[name]
+		var scene: Dictionary = p.get("scene", {})
+		var slug: String = name.to_lower().replace(" ", "_").replace(",", "").replace("'", "")
+		if not only.is_empty() and not only.has(slug):
 			continue
-		_apply_weather(v[1], true)
-		ground_snow = v[5]
-		Story.S["dread"] = v[4] * 60.0
-		Story.S["cold"] = v[5] * 60.0
-		player.global_position = v[2]
-		player.face(v[3])
+		if not shots.has(name):
+			continue
+		var f: Array = feel.get(name, [0.0, 0.0])
+		Story.S["dread"] = f[0] * 60.0
+		Story.S["cold"] = f[1] * 60.0
+		ground_snow = 1.0 if scene.get("atmosphere", "") in ["snow", "storm", "hail", "moon", "dawn"] or scene.get("at", "") in ["tomb", "gate", "village"] else 0.0
+		_look_from_tag = false
+		_apply_scene(scene)
+		_apply_weather(scene.get("atmosphere", weather), true)
+		if scene.has("at") and stations.has(scene.at):
+			player.global_position = stations[scene.at] + Vector3(0, 0.5, 4)
 		player.set_physics_process(false)
-		for i in 40:
-			_feel(0.25)
-			await get_tree().process_frame
-		await _shot("view_" + v[0])
-		print("[view] ", v[0])
+		var shot := _shot_for(name, scene)
+		letterbox = 1.0
+		_frame(shot)
+		_shot_tween.kill()
+		for i in 6:
+			_feel(10.0)
+		ui.begin_passage(shot.get("side", "left"))
+		var text := ""
+		for op in p.get("ops", []):
+			if op.get("t", "") == "text":
+				text = op.get("text", "")
+				break
+		if text != "":
+			ui.add_text(text)
+		if shot.get("open", false):
+			door_left.rotation.y = -1.25
+			door_right.rotation.y = 1.1
+		await get_tree().create_timer(2.5).timeout
+		ui.settle()
+		await get_tree().process_frame
+		await _shot("view_" + slug)
+		print("[view] ", name)
 	get_tree().quit(0)
 
 

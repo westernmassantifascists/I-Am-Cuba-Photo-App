@@ -79,16 +79,16 @@
   },
   "The Quatre Saisons": {
    "tags": [
-    "at-courtyard",
+    "at-munich",
     "music-munich",
     "atmosphere-noon",
-    "look-warm"
+    "look-vivid-warm"
    ],
    "scene": {
-    "at": "courtyard",
+    "at": "munich",
     "music": "munich",
     "atmosphere": "noon",
-    "look": "warm"
+    "look": "vivid-warm"
    },
    "ops": [
     {
@@ -126,12 +126,12 @@
   },
   "Walpurgis Nacht": {
    "tags": [
-    "at-courtyard",
+    "at-munich",
     "music-munich",
     "atmosphere-noon"
    ],
    "scene": {
-    "at": "courtyard",
+    "at": "munich",
     "music": "munich",
     "atmosphere": "noon"
    },
@@ -159,12 +159,12 @@
   },
   "The Drive": {
    "tags": [
-    "at-courtyard",
+    "at-munich",
     "music-munich",
     "atmosphere-afternoon"
    ],
    "scene": {
-    "at": "courtyard",
+    "at": "munich",
     "music": "munich",
     "atmosphere": "afternoon"
    },
@@ -194,13 +194,13 @@
     "at-crossroads",
     "music-valley",
     "atmosphere-afternoon",
-    "look-warm"
+    "look-vivid-warm"
    ],
    "scene": {
     "at": "crossroads",
     "music": "valley",
     "atmosphere": "afternoon",
-    "look": "warm"
+    "look": "vivid-warm"
    },
    "ops": [
     {
@@ -282,13 +282,13 @@
     "at-crossroads",
     "music-valley",
     "atmosphere-evening",
-    "look-cold"
+    "look-hard-muted"
    ],
    "scene": {
     "at": "crossroads",
     "music": "valley",
     "atmosphere": "evening",
-    "look": "cold"
+    "look": "hard-muted"
    },
    "ops": [
     {
@@ -572,12 +572,12 @@
    "tags": [
     "music-storm",
     "atmosphere-snow",
-    "look-cold"
+    "look-hard-muted"
    ],
    "scene": {
     "music": "storm",
     "atmosphere": "snow",
-    "look": "cold"
+    "look": "hard-muted"
    },
    "ops": [
     {
@@ -613,11 +613,11 @@
   "The Howl": {
    "tags": [
     "atmosphere-storm",
-    "look-cold"
+    "look-hard-muted"
    ],
    "scene": {
     "atmosphere": "storm",
-    "look": "cold"
+    "look": "hard-muted"
    },
    "ops": [
     {
@@ -639,13 +639,13 @@
     "at-village",
     "music-village",
     "atmosphere-dusk",
-    "look-cold"
+    "look-hard-muted"
    ],
    "scene": {
     "at": "village",
     "music": "village",
     "atmosphere": "dusk",
-    "look": "cold"
+    "look": "hard-muted"
    },
    "ops": [
     {
@@ -697,13 +697,13 @@
     "at-gate",
     "music-tomb",
     "atmosphere-storm",
-    "look-moon"
+    "look-dark"
    ],
    "scene": {
     "at": "gate",
     "music": "tomb",
     "atmosphere": "storm",
-    "look": "moon"
+    "look": "dark"
    },
    "ops": [
     {
@@ -730,13 +730,13 @@
     "at-tomb",
     "music-tomb",
     "atmosphere-moon",
-    "look-moon"
+    "look-dark"
    ],
    "scene": {
     "at": "tomb",
     "music": "tomb",
     "atmosphere": "moon",
-    "look": "moon"
+    "look": "dark"
    },
    "ops": [
     {
@@ -780,13 +780,13 @@
     "at-tomb",
     "music-tomb",
     "atmosphere-storm",
-    "look-moon"
+    "look-dark"
    ],
    "scene": {
     "at": "tomb",
     "music": "tomb",
     "atmosphere": "storm",
-    "look": "moon"
+    "look": "dark"
    },
    "ops": [
     {
@@ -848,13 +848,13 @@
     "at-tomb",
     "music-storm",
     "atmosphere-hail",
-    "look-moon"
+    "look-dark"
    ],
    "scene": {
     "at": "tomb",
     "music": "storm",
     "atmosphere": "hail",
-    "look": "moon"
+    "look": "dark"
    },
    "ops": [
     {
@@ -885,13 +885,13 @@
     "at-tomb",
     "music-tomb",
     "atmosphere-hail",
-    "look-flash"
+    "look-bright-muted"
    ],
    "scene": {
     "at": "tomb",
     "music": "tomb",
     "atmosphere": "hail",
-    "look": "flash"
+    "look": "bright-muted"
    },
    "ops": [
     {
@@ -933,13 +933,13 @@
     "at-tomb",
     "music-tomb",
     "atmosphere-moon",
-    "look-dark"
+    "look-muted-dark"
    ],
    "scene": {
     "at": "tomb",
     "music": "tomb",
     "atmosphere": "moon",
-    "look": "dark"
+    "look": "muted-dark"
    },
    "ops": [
     {
@@ -991,13 +991,13 @@
     "at-tomb",
     "music-dawn",
     "atmosphere-dawn",
-    "look-dawn"
+    "look-cool-hard"
    ],
    "scene": {
     "at": "tomb",
     "music": "dawn",
     "atmosphere": "dawn",
-    "look": "dawn"
+    "look": "cool-hard"
    },
    "ops": [
     {
@@ -1025,13 +1025,13 @@
     "at-tomb",
     "music-dawn",
     "atmosphere-dawn",
-    "look-dawn"
+    "look-cool-hard"
    ],
    "scene": {
     "at": "tomb",
     "music": "dawn",
     "atmosphere": "dawn",
-    "look": "dawn"
+    "look": "cool-hard"
    },
    "ops": [
     {

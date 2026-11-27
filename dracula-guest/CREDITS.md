@@ -24,6 +24,10 @@ Music: composed for this game on the Darkroom groovebox (darkroom/lib/groovebox.
 - **Moss 01** (scan) — Rob Tuytel. CC0, Poly Haven: https://polyhaven.com/a/moss_01 — ground cover
 - **Fern 02** (scan) — Rob Tuytel, Rico Cilliers. CC0, Poly Haven: https://polyhaven.com/a/fern_02 — ground cover
 - **Nettle Plant** (scan) — Rob Tuytel, Rico Cilliers. CC0, Poly Haven: https://polyhaven.com/a/nettle_plant — the deserted village
+- **Large Castle Door** (scan) — Tina. CC0, Poly Haven: https://polyhaven.com/a/large_castle_door — the bronze door of the tomb
+- **Large Iron Gate** (scan) — Josh Dean. CC0, Poly Haven: https://polyhaven.com/a/large_iron_gate — the churchyard gate
+- **Modular Fort 01** (scan) — Rico Cilliers. CC0, Poly Haven: https://polyhaven.com/a/modular_fort_01 — stone walls of the deserted village
+- **Horse Head** (scan) — Tina. CC0, Poly Haven: https://polyhaven.com/a/horse_head — the horses that scream (opening collage)
 - **Marble 01** (texture) — Rob Tuytel. CC0, Poly Haven: https://polyhaven.com/a/marble_01 — the tomb
 - **Medieval Blocks 02** (texture) — Rob Tuytel. CC0, Poly Haven: https://polyhaven.com/a/medieval_blocks_02 — tomb plinth and steps
 - **Mossy Stone Wall** (texture) — Amal Kumar. CC0, Poly Haven: https://polyhaven.com/a/mossy_stone_wall — churchyard wall

@@ -14,7 +14,7 @@
      at-<station>        the place in the level where it happens
      music-<bed>         the music bed (bed_munich, bed_valley, ... rendered by the groovebox)
      atmosphere-<sky>    weather and sky: noon, afternoon, evening, dusk, snow, storm, moon, dawn
-     look-<grade>        colour grading of the world
+     look-<mood>         a picture mood developed from the scans (godot/data/look.json)
      drift-road feel-*   roadside moments: the one that fits your feelings comes next
    [[Walk on->@walk]] closes the text and gives you back the road.
    ------------------------------------------------------------------------------------------ */
@@ -23,7 +23,7 @@
 @set $readTomb = false
 @set $snowing = false
 
-:: The Quatre Saisons [at-courtyard music-munich atmosphere-noon look-warm]
+:: The Quatre Saisons [at-munich music-munich atmosphere-noon look-vivid-warm]
 @card "Dracula's Guest" kicker="Bram Stoker"
 When we started for our drive the sun was shining brightly on Munich, and the air was full of the joyousness of early summer.
 
@@ -32,7 +32,7 @@ Just as we were about to depart, Herr Delbrück, the maître d'hôtel of the Qua
 [[Ask Johann what night it is->Walpurgis Nacht][defiance+5]]
 [[Sink back in the carriage and say nothing->The Drive][dread+5]]
 
-:: Walpurgis Nacht [at-courtyard music-munich atmosphere-noon]
+:: Walpurgis Nacht [at-munich music-munich atmosphere-noon]
 "Tell me, Johann, what is tonight?"
 
 He crossed himself, as he answered laconically: "Walpurgis nacht." Then he took out his watch, a great, old-fashioned German silver thing as big as a turnip, and looked at it, with his eyebrows gathered together.
@@ -40,7 +40,7 @@ He crossed himself, as he answered laconically: "Walpurgis nacht." Then he took 
 @set $askedJohann = true
 [[Drive on->The Drive]]
 
-:: The Drive [at-courtyard music-munich atmosphere-afternoon]
+:: The Drive [at-munich music-munich atmosphere-afternoon]
 @video departure
 He started off rapidly, as if to make up for lost time. Every now and then the horses seemed to throw up their heads and sniff the air suspiciously.
 
@@ -48,7 +48,7 @@ The road was pretty bleak, for we were traversing a sort of high windswept plate
 
 @goto The Crossroads
 
-:: The Crossroads [at-crossroads music-valley atmosphere-afternoon look-warm]
+:: The Crossroads [at-crossroads music-valley atmosphere-afternoon look-vivid-warm]
 It looked so inviting that, even at the risk of offending him, I called Johann to stop. He made all sorts of excuses and frequently crossed himself as he spoke.
 
 He seemed to throw himself off the box, so quickly did he reach the ground. He stretched out his hands appealingly to me and implored me not to go.
@@ -67,7 +67,7 @@ Whilst we were talking, we heard a sort of sound between a yelp and a bark. It w
 [[Ask about the place where the road leads->It Is Unholy][dread+10]]
 [[Laugh at him->Go Home, Johann][defiance+10]]
 
-:: It Is Unholy [at-crossroads music-valley atmosphere-evening look-cold]
+:: It Is Unholy [at-crossroads music-valley atmosphere-evening look-hard-muted]
 "It is unholy." "What is unholy?" I enquired. "The village." "Then there is a village?" "No, no. No one lives there hundreds of years."
 
 Long ago, men had died there and been buried in their graves; but sounds were heard under the clay, and when the graves were opened, men and women were found rosy with life and their mouths red with blood.
@@ -135,7 +135,7 @@ I thought of the tall, thin man on the crest of the hill, and of how the horses 
 
 /* ---------------- threshold turns: they break in when a feeling crosses its line ---------------- */
 
-:: The Snow Begins [music-storm atmosphere-snow look-cold]
+:: The Snow Begins [music-storm atmosphere-snow look-hard-muted]
 @turn $cold >= 45
 @video snowfall
 As I looked there came a cold shiver in the air, and the snow began to fall. I thought of the miles and miles of bleak country I had passed.
@@ -145,7 +145,7 @@ Darker and darker grew the sky, and faster and heavier fell the snow, till the e
 @set $snowing = true
 [[Hurry on to the shelter of the wood->@resume][cold+5]]
 
-:: The Howl [atmosphere-storm look-cold]
+:: The Howl [atmosphere-storm look-hard-muted]
 @turn $dread >= 55
 Every now and then the heavens were torn asunder by vivid lightning. At such moments the weird sound of the wolf appeared to be echoed by many similar sounds around me.
 
@@ -153,7 +153,7 @@ Every now and then the heavens were torn asunder by vivid lightning. At such mom
 
 /* ---------------- the deserted village and the tomb ---------------- */
 
-:: The Deserted Village [at-village music-village atmosphere-dusk look-cold]
+:: The Deserted Village [at-village music-village atmosphere-dusk look-hard-muted]
 It appeared to me that, amongst so many old foundations as I had passed, there might be still standing a house in which, though in ruins, I could find some sort of shelter for a while.
 
 @if $snowing
@@ -166,14 +166,14 @@ The houses had no doors. The wind went through them as if they were not there, a
 
 [[Look for shelter->@walk][cold+5]]
 
-:: The Cypress Alley [at-gate music-tomb atmosphere-storm look-moon]
+:: The Cypress Alley [at-gate music-tomb atmosphere-storm look-dark]
 As I skirted the edge of the copse, I found that a low wall encircled it, and following this I presently found an opening. Here the cypresses formed an alley leading up to a square mass of some kind of building.
 
 Just as I caught sight of this, however, the drifting clouds obscured the moon, and I passed up the path in darkness.
 
 [[Grope your way on->@walk][dread+10 cold+5]]
 
-:: The Tomb [at-tomb music-tomb atmosphere-moon look-moon]
+:: The Tomb [at-tomb music-tomb atmosphere-moon look-dark]
 I stopped, for there was a sudden stillness. The moonlight broke through the clouds showing me that I was in a graveyard and that the square object before me was a great massive tomb of marble, as white as the snow that lay on and all around it.
 
 I walked around it and read, over the Doric door, in German—
@@ -186,7 +186,7 @@ On the top of the tomb, seemingly driven through the solid marble, was a great i
 @nudge dread+5
 [[This was Walpurgis Night->Walpurgis Night]]
 
-:: Walpurgis Night [at-tomb music-tomb atmosphere-storm look-moon]
+:: Walpurgis Night [at-tomb music-tomb atmosphere-storm look-dark]
 Walpurgis Night was when, according to the belief of millions of people, the devil was abroad—when the graves were opened and the dead came forth and walked.
 
 This very place the driver had specially shunned. This was the depopulated village of centuries ago. This was where the suicide lay; and this was the place where I was alone—unmanned, shivering with cold in a shroud of snow with a wild storm gathering again upon me!
@@ -201,7 +201,7 @@ I began to wish, for the first time, that I had taken Johann's advice.
 [[Wish, for the first time, that you had listened to Johann->The Hail][dread+15]]
 [[Huddle into your coat against the marble->The Hail][cold+15]]
 
-:: The Hail [at-tomb music-storm atmosphere-hail look-moon]
+:: The Hail [at-tomb music-storm atmosphere-hail look-dark]
 @sfx music/sfx_thunder
 And now a perfect tornado burst upon me. The ground shook as though thousands of horses thundered across it; and this time the storm bore on its icy wings, not snow, but great hailstones.
 
@@ -209,7 +209,7 @@ I sought the only spot that seemed to afford refuge, the deep Doric doorway of t
 
 [[Look into the tomb->The Bier][dread+10]]
 
-:: The Bier [at-tomb music-tomb atmosphere-hail look-flash]
+:: The Bier [at-tomb music-tomb atmosphere-hail look-bright-muted]
 @fx flash
 @video apparition
 There came a flash of forked lightning that lit up the whole expanse of the heavens. In the instant, as I am a living man, I saw a beautiful woman with rounded cheeks and red lips, seemingly sleeping on a bier.
@@ -221,7 +221,7 @@ Another blinding flash seemed to strike the iron stake that surmounted the tomb,
 
 [[…->The Wolf]]
 
-:: The Wolf [at-tomb music-tomb atmosphere-moon look-dark]
+:: The Wolf [at-tomb music-tomb atmosphere-moon look-muted-dark]
 @fx fadeout time=3
 @sfx music/sfx_howl
 A vast stillness enveloped me, as though all the world were asleep or dead—only broken by the low panting as of some animal close to me.
@@ -232,7 +232,7 @@ I felt a warm rasping at my throat. Some great animal was lying on me and now li
 [[Try to rise and fight it->Holloa][defiance+20]]
 [[Let the warmth of it keep you->Holloa][cold+15]]
 
-:: Holloa [at-tomb music-dawn atmosphere-dawn look-dawn]
+:: Holloa [at-tomb music-dawn atmosphere-dawn look-cool-hard]
 @fx fadein time=4
 Then seemingly very far away, I heard a "Holloa! holloa!" as of many voices calling in unison. A red glare began to move round the grove of cypresses. Then all at once from beyond the trees there came at a trot a troop of horsemen bearing torches.
 
@@ -240,7 +240,7 @@ Then seemingly very far away, I heard a "Holloa! holloa!" as of many voices call
 
 [[Ride back to Munich->The Telegram]]
 
-:: The Telegram [at-tomb music-dawn atmosphere-dawn look-dawn]
+:: The Telegram [at-tomb music-dawn atmosphere-dawn look-cool-hard]
 @card "The Quatre Saisons" kicker="Morning"
 When we arrived, Herr Delbrück rushed so quickly down the steps to meet me, that it was apparent he had been watching within. "I had this telegram from the Boyar whose guest you are," and he took from his pocket a telegram which he handed to me, and I read:
 

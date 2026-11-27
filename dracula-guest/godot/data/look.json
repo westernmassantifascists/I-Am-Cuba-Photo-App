@@ -1,0 +1,439 @@
+{
+ "note": "Developed from this piece's own scans, textures and skies by tools/develop-look.mjs (Darkroom develop). Rewritten each time.",
+ "collection": {
+  "pictures": 44,
+  "monochrome": false,
+  "mean": {
+   "lum": 0.342,
+   "contrast": 0.09,
+   "sat": 0.316,
+   "warmth": 0.082
+  }
+ },
+ "grade": {
+  "saturation": 0.7,
+  "contrast": 1.15,
+  "shadow_tint": [
+   0.282,
+   0.306,
+   0.306
+  ],
+  "highlight_tint": [
+   0.859,
+   0.878,
+   0.902
+  ],
+  "grain": 0.035
+ },
+ "palette": {
+  "bg": "#0c0d0d",
+  "surface": "#19191a",
+  "text": "#dbe0e6",
+  "dim": "#8d98a5",
+  "accent": "#bfa888",
+  "accent_light": "#d4c5af",
+  "swatches": [
+   "#0e0f0f",
+   "#483f33",
+   "#76664b",
+   "#968f87",
+   "#ccdbed"
+  ]
+ },
+ "looks": {
+  "muted-dark": {
+   "words": [
+    "muted",
+    "dark",
+    "soft",
+    "cool"
+   ],
+   "brightness": 0.61,
+   "contrast": 0.6,
+   "saturation": 0.56,
+   "sepia": 0,
+   "tint": [
+    0.255,
+    0.231,
+    0.2
+   ],
+   "members": [
+    "rock_wall_08",
+    "weathered_planks",
+    "dry_branches_medium_01#1",
+    "fir_sapling#1",
+    "large_iron_gate",
+    "moss_01#1"
+   ]
+  },
+  "dark": {
+   "words": [
+    "dark"
+   ],
+   "brightness": 0.62,
+   "contrast": 1.13,
+   "saturation": 1.07,
+   "sepia": 0,
+   "tint": [
+    0.259,
+    0.239,
+    0.192
+   ],
+   "members": [
+    "mossy_stone_wall",
+    "dead_tree_trunk#1",
+    "gothic_statue#1",
+    "large_castle_door",
+    "nettle_plant#1",
+    "pine_roots#1",
+    "pine_roots#3",
+    "rock_moss_set_01#1",
+    "rock_moss_set_02#1",
+    "kloppenheim_02_puresky",
+    "kloppenheim_07_puresky"
+   ]
+  },
+  "vivid-warm": {
+   "words": [
+    "vivid",
+    "warm",
+    "soft"
+   ],
+   "brightness": 1,
+   "contrast": 0.7,
+   "saturation": 1.44,
+   "sepia": 0.45,
+   "tint": [
+    0.435,
+    0.353,
+    0.247
+   ],
+   "members": [
+    "forest_leaves_02",
+    "medieval_blocks_02",
+    "stony_dirt_path",
+    "boulder_01#1",
+    "dead_tree_trunk_02#1",
+    "fern_02#1",
+    "fir_sapling#3",
+    "rock_07#1",
+    "rock_09#1",
+    "root_cluster_02#1",
+    "stone_01#1",
+    "tree_stump_01#1",
+    "tree_stump_02#1"
+   ]
+  },
+  "cool-hard": {
+   "words": [
+    "cool",
+    "hard",
+    "bright",
+    "vivid"
+   ],
+   "brightness": 1.37,
+   "contrast": 1.6,
+   "saturation": 1.25,
+   "sepia": 0,
+   "tint": [
+    0.475,
+    0.561,
+    0.698
+   ],
+   "members": [
+    "kloppenheim_01_puresky",
+    "kloppenheim_05_puresky",
+    "kloppenheim_06_puresky"
+   ]
+  },
+  "hard-muted": {
+   "words": [
+    "hard",
+    "muted",
+    "bright",
+    "cool"
+   ],
+   "brightness": 1.41,
+   "contrast": 1.6,
+   "saturation": 0.28,
+   "sepia": 0,
+   "tint": [
+    0.561,
+    0.565,
+    0.58
+   ],
+   "members": [
+    "kloppenheim_03_puresky",
+    "snow_field_2_puresky"
+   ]
+  },
+  "bright-muted": {
+   "words": [
+    "bright",
+    "muted",
+    "soft"
+   ],
+   "brightness": 1.49,
+   "contrast": 0.63,
+   "saturation": 0.64,
+   "sepia": 0.12,
+   "tint": [
+    0.561,
+    0.522,
+    0.455
+   ],
+   "members": [
+    "cobblestone_floor_01",
+    "marble_01",
+    "roof_slates_02",
+    "snow_02",
+    "worn_mossy_plasterwall",
+    "horse_head",
+    "modular_fort_01#1",
+    "modular_fort_01#2",
+    "modular_fort_01#3"
+   ]
+  }
+ },
+ "skies": {
+  "kloppenheim_01_puresky": "cool-hard",
+  "kloppenheim_02_puresky": "dark",
+  "kloppenheim_03_puresky": "hard-muted",
+  "kloppenheim_05_puresky": "cool-hard",
+  "kloppenheim_06_puresky": "cool-hard",
+  "kloppenheim_07_puresky": "dark",
+  "snow_field_2_puresky": "hard-muted"
+ },
+ "qualities": {
+  "cobblestone_floor_01": [
+   "bright",
+   "muted",
+   "bright-muted"
+  ],
+  "forest_leaves_02": [
+   "warm",
+   "vivid",
+   "bright",
+   "vivid-warm"
+  ],
+  "marble_01": [
+   "bright",
+   "warm",
+   "soft",
+   "bright-muted"
+  ],
+  "medieval_blocks_02": [
+   "warm",
+   "bright",
+   "vivid",
+   "vivid-warm"
+  ],
+  "mossy_stone_wall": [
+   "vivid",
+   "dark"
+  ],
+  "rock_wall_08": [
+   "muted",
+   "soft",
+   "muted-dark"
+  ],
+  "roof_slates_02": [
+   "bright",
+   "muted",
+   "soft",
+   "bright-muted"
+  ],
+  "snow_02": [
+   "muted",
+   "bright",
+   "soft",
+   "cool",
+   "bright-muted"
+  ],
+  "stony_dirt_path": [
+   "vivid",
+   "dark",
+   "soft",
+   "warm",
+   "vivid-warm"
+  ],
+  "weathered_planks": [
+   "soft",
+   "muted-dark"
+  ],
+  "worn_mossy_plasterwall": [
+   "muted",
+   "bright",
+   "bright-muted"
+  ],
+  "boulder_01#1": [
+   "warm",
+   "vivid-warm"
+  ],
+  "dead_tree_trunk#1": [
+   "dark",
+   "vivid",
+   "soft"
+  ],
+  "dead_tree_trunk_02#1": [
+   "vivid",
+   "warm",
+   "vivid-warm"
+  ],
+  "dry_branches_medium_01#1": [
+   "muted",
+   "muted-dark"
+  ],
+  "fern_02#1": [
+   "vivid",
+   "soft",
+   "warm",
+   "vivid-warm"
+  ],
+  "fir_sapling#1": [
+   "soft",
+   "muted",
+   "dark",
+   "muted-dark"
+  ],
+  "fir_sapling#3": [
+   "vivid",
+   "warm",
+   "vivid-warm"
+  ],
+  "gothic_statue#1": [
+   "hard",
+   "dark"
+  ],
+  "horse_head": [
+   "bright-muted"
+  ],
+  "large_castle_door": [
+   "dark",
+   "soft"
+  ],
+  "large_iron_gate": [
+   "dark",
+   "muted",
+   "soft",
+   "cool",
+   "muted-dark"
+  ],
+  "modular_fort_01#1": [
+   "bright",
+   "muted",
+   "bright-muted"
+  ],
+  "modular_fort_01#2": [
+   "bright-muted"
+  ],
+  "modular_fort_01#3": [
+   "bright-muted"
+  ],
+  "moss_01#1": [
+   "dark",
+   "muted",
+   "cool",
+   "muted-dark"
+  ],
+  "nettle_plant#1": [
+   "dark",
+   "hard",
+   "muted"
+  ],
+  "pine_roots#1": [
+   "dark",
+   "soft"
+  ],
+  "pine_roots#3": [
+   "dark",
+   "soft"
+  ],
+  "rock_07#1": [
+   "warm",
+   "vivid",
+   "vivid-warm"
+  ],
+  "rock_09#1": [
+   "vivid",
+   "dark",
+   "warm",
+   "vivid-warm"
+  ],
+  "rock_moss_set_01#1": [
+   "dark",
+   "hard"
+  ],
+  "rock_moss_set_02#1": [
+   "hard",
+   "muted",
+   "dark"
+  ],
+  "root_cluster_02#1": [
+   "vivid",
+   "soft",
+   "warm",
+   "vivid-warm"
+  ],
+  "stone_01#1": [
+   "warm",
+   "vivid",
+   "vivid-warm"
+  ],
+  "tree_stump_01#1": [
+   "vivid",
+   "warm",
+   "vivid-warm"
+  ],
+  "tree_stump_02#1": [
+   "soft",
+   "vivid",
+   "warm",
+   "vivid-warm"
+  ],
+  "kloppenheim_01_puresky": [
+   "hard",
+   "cool",
+   "bright",
+   "cool-hard"
+  ],
+  "kloppenheim_02_puresky": [
+   "cool",
+   "dark",
+   "hard",
+   "vivid"
+  ],
+  "kloppenheim_03_puresky": [
+   "hard",
+   "cool",
+   "muted",
+   "hard-muted"
+  ],
+  "kloppenheim_05_puresky": [
+   "cool",
+   "hard",
+   "vivid",
+   "cool-hard"
+  ],
+  "kloppenheim_06_puresky": [
+   "cool",
+   "hard",
+   "bright",
+   "vivid",
+   "cool-hard"
+  ],
+  "kloppenheim_07_puresky": [
+   "cool",
+   "hard",
+   "dark",
+   "muted"
+  ],
+  "snow_field_2_puresky": [
+   "hard",
+   "muted",
+   "bright",
+   "cool",
+   "hard-muted"
+  ]
+ }
+}

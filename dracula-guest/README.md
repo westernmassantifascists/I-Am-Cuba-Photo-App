@@ -49,6 +49,7 @@ Open Font License, in `godot/fonts`).
 | Fonts: Old Standard TT, IM Fell English SC | Google Fonts | SIL OFL 1.1 |
 | The Countess on the bier | Microsoft Rocketbox avatar library, Female_Adult_08 (photographed face and body) | MIT |
 | Orchestra: string sections, horns, trombones, tuba, timpani, bass drum, harp, church organ | Versilian Studios, VSCO 2 Community Edition | CC0 |
+| Wolves and thunder | Wikimedia Commons: US Fish & Wildlife Service (PD); Bidgee (CC BY 3.0); Caesar (PD) | see CREDITS.md |
 | Music | composed for this piece and played on those recorded instruments by the Darkroom groovebox (`../darkroom/lib/groovebox.mjs`) | ours |
 
 `tools/fetch.mjs` writes the full list with authors to `CREDITS.md`.
@@ -62,6 +63,7 @@ cd dracula-guest
 node tools/fetch.mjs          # scans, textures, skies (~130 MB) and the film clips
 node tools/fetch-samples.mjs  # the recorded orchestra (VSCO 2 CE, CC0, ~1.5 GB, into .cache/vsco)
 node tools/render-music.mjs   # the score, from music/score.json
+node tools/fetch-sfx.mjs      # the recorded wolves and thunder
 node tools/compile-story.mjs  # story/draculas-guest.twee -> godot/data/story.json
 node tools/develop-look.mjs   # optional: re-develop the look from the scans (godot/data/look.json is committed)
 ```

@@ -156,7 +156,7 @@ func _ready() -> void:
 	holder.add_child(again)
 	ebox.add_child(holder)
 	var credits := _label(ebox, italic_font, 14, dim)
-	credits.text = "Bram Stoker, Dracula's Guest, 1914.\nPhotogrammetry, surfaces and skies from Poly Haven (CC0). Public-domain film from Wikimedia Commons.\nScore played on VSCO 2 CE (CC0) by the Darkroom groovebox. The Countess: Microsoft Rocketbox (MIT).\nType: Old Standard and IM Fell English (SIL OFL)."
+	credits.text = "Bram Stoker, Dracula's Guest, 1914.\nPhotogrammetry, surfaces and skies from Poly Haven (CC0). Public-domain film from Wikimedia Commons.\nScore played on VSCO 2 CE (CC0) by the Darkroom groovebox. The Countess: Microsoft Rocketbox (MIT).\nWolves: US Fish & Wildlife Service (PD). Thunder: Bidgee (CC BY 3.0), Caesar (PD), via Wikimedia Commons.\nType: Old Standard and IM Fell English (SIL OFL)."
 	_layout("left")
 
 

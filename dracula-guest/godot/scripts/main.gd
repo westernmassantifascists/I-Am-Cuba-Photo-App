@@ -419,7 +419,7 @@ func _process(delta: float) -> void:
 		if _lightning_t <= 0.0:
 			_lightning_t = rng.randf_range(lightning_every * 0.5, lightning_every * 1.5)
 			_lightning()
-			get_tree().create_timer(rng.randf_range(0.6, 2.0)).timeout.connect(func(): music.sfx("res://assets/music/sfx_thunder.ogg", 0.8))
+			get_tree().create_timer(rng.randf_range(0.6, 2.0)).timeout.connect(func(): music.sfx("res://assets/music/sfx_thunder%s.ogg" % ["", "_2"][rng.randi() % 2], 0.8))
 
 
 ## Colour, fog and snow follow the weather, the developed look and the feelings.

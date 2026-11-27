@@ -155,16 +155,6 @@
    "gain": 0.55,
    "number": 35
   },
-  "howl": {
-   "type": "howl",
-   "release": 1.2,
-   "gain": 0.35
-  },
-  "thunder": {
-   "type": "thunder",
-   "decay": 3.5,
-   "gain": 0.9
-  },
   "churchbell": {
    "type": "fm",
    "ratio": 2.76,
@@ -542,38 +532,6 @@
      "reverb": 0.3,
      "gain": 0.6,
      "pattern": "D2! . . . . . . . | D2! . . . . . . . | D2! . . . . . . . | D2! . . . A1 . A1 ."
-    }
-   ]
-  },
-  "sfx_howl": {
-   "bars": 2,
-   "tail": 3,
-   "tracks": [
-    {
-     "inst": "howl",
-     "steps": 4,
-     "reverb": 0.7,
-     "pattern": "A3 - - - | - . . ."
-    },
-    {
-     "inst": "howl",
-     "steps": 4,
-     "pan": 0.7,
-     "gain": 0.5,
-     "reverb": 0.8,
-     "pattern": ". . E4 - | - - . ."
-    }
-   ]
-  },
-  "sfx_thunder": {
-   "bars": 2,
-   "tail": 3,
-   "tracks": [
-    {
-     "inst": "thunder",
-     "steps": 1,
-     "reverb": 0.4,
-     "pattern": "C2 | ."
     }
    ]
   },

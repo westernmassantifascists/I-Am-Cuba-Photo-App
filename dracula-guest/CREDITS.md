@@ -58,3 +58,11 @@ Music: composed for this game on the Darkroom groovebox (darkroom/lib/groovebox.
 ## Orchestra
 
 - **VSCO 2 Community Edition** — Versilian Studios (https://github.com/sgossner/VSCO-2-CE), CC0 1.0. String sections, horns, trombones, tuba, timpani, bass drum, harp; church organ sampled by Simon Dalzell (Ivy Audio). Fetched by `tools/fetch-samples.mjs`, played by the Darkroom groovebox sampler.
+
+## Sound effects (Wikimedia Commons)
+
+- **Wolves howling** — "Wolf howls.ogg", US Fish and Wildlife Service, public domain (PD-USGov-FWS).
+- **Thunder** — "Thunder.ogg" by Bidgee, CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/).
+- **Thunder in the rain** — "Rain and thunder.ogg", recorded by Caesar in Sundbyberg, Sweden, public domain.
+
+Fetched and cut by `tools/fetch-sfx.mjs`.
